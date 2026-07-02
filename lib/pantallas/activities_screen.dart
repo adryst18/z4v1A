@@ -7,7 +7,7 @@ import 'package:sabia/pantallas/profile_screen.dart';
 import 'package:sabia/pantallas/config_voz_screen.dart';
 import 'package:sabia/pantallas/NyCM/vocales.dart';
 import 'package:sabia/pantallas/NyCM/hlilbro1.dart';
-
+import 'package:sabia/pantallas/NyCM/lecciones/leccion_16_lee_enunciados.dart';
 
 class ActivitiesScreen extends StatefulWidget {
   const ActivitiesScreen({super.key});
@@ -19,12 +19,12 @@ class ActivitiesScreen extends StatefulWidget {
 class _ActivitiesScreenState extends State<ActivitiesScreen> {
   final LogService _logService = LogService();
   final VoiceService _voiceService = VoiceService();
-  
+
   // Variables de estado
   int puntos = 0;
   bool retoCompletado = false;
   int actividades = 0;
-  
+
   // Control de navegación
   int _selectedIndex = 1; // Índice 1 porque es la pantalla de Actividades
 
@@ -58,7 +58,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
       message: 'Lectura de texto en actividades',
       details: {'texto': texto},
     );
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('🔊 $texto'),
@@ -103,7 +103,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
           context,
           MaterialPageRoute(builder: (context) => const ConfigVozScreen()),
         );
-        
+
         if (result == true) {
           // Recargar configuración de voz si hubo cambios
           await _voiceService.recargarConfiguracion();
@@ -118,7 +118,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
-      
+
       // Header igual que home_screen
       appBar: AppBar(
         backgroundColor: const Color(0xFF134074),
@@ -166,10 +166,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                   ),
                   const Text(
                     'Sistema de Alfabetización Basado en Inteligencia Artificial',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.white70,
-                    ),
+                    style: TextStyle(fontSize: 10, color: Colors.white70),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -200,7 +197,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
           ],
         ),
       ),
-      
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -218,11 +215,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.school,
-                    color: Color(0xFF9252e3),
-                    size: 28,
-                  ),
+                  const Icon(Icons.school, color: Color(0xFF9252e3), size: 28),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -250,7 +243,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                   // Botón de bocina para leer el mensaje de bienvenida
                   GestureDetector(
                     onTap: () => _leerTexto(
-                      '¡Descubre tu camino al aprendizaje! Selecciona una actividad para comenzar. NyCM LPA, Lecciones IVEA digitalizadas.'
+                      '¡Descubre tu camino al aprendizaje! Selecciona una actividad para comenzar. NyCM LPA, Lecciones IVEA digitalizadas.',
                     ),
                     child: Container(
                       padding: const EdgeInsets.all(8),
@@ -269,22 +262,24 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            
+
             // Card principal habilitada - NyCM LPA
             _buildActivityCard(
               titulo: "NyCM LPA",
-              descripcion: "Lecciones IVEA digitalizadas. Aprende a leer y escribir de forma interactiva y personalizada.",
+              descripcion:
+                  "Lecciones IVEA digitalizadas. Aprende a leer y escribir de forma interactiva y personalizada.",
               imagenAsset: "assets/imagenes/portada.jpg",
               habilitado: true,
               colorBorde: const Color(0xFF38b000),
-              
+
               onTap: () {
                 _logService.addLog(
                   type: LogType.navegacion,
-                  message: 'Actividad NyCM LPA seleccionada - Navegando a Libro Nivel 1',
+                  message:
+                      'Actividad NyCM LPA seleccionada - Navegando a Libro Nivel 1',
                   details: {'actividad': 'NyCM LPA', 'destino': 'HLibro1'},
                 );
-                
+
                 // Navegar a la pantalla del libro nivel 1
                 Navigator.push(
                   context,
@@ -292,55 +287,83 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                 );
               },
               onRead: () {
-                _leerTexto('NyCM LPA. Programa de Alfabetización con apoyo de Inteligencia Artificial. Lecciones IVEA digitalizadas. Aprende a leer y escribir de forma interactiva y personalizada. Contiene lecciones de vocales, sílabas y palabras completas.');
+                _leerTexto(
+                  'NyCM LPA. Programa de Alfabetización con apoyo de Inteligencia Artificial. Lecciones IVEA digitalizadas. Aprende a leer y escribir de forma interactiva y personalizada. Contiene lecciones de vocales, sílabas y palabras completas.',
+                );
               },
             ),
             // Card deshabilitada - Libro Alfabetizacion
             _buildActivityCard(
               titulo: "Libro Alfabetizacion",
-              descripcion: "Material didáctico interactivo para el aprendizaje de la lectoescritura.",
+              descripcion:
+                  "Material didáctico interactivo para el aprendizaje de la lectoescritura.",
               imagenAsset: "assets/imagenes/portada2.jpg",
               habilitado: false,
               colorBorde: const Color(0xFF9b9b9b),
               onTap: null,
               onRead: () {
-                _leerTexto('Libro Alfabetizacion. Material didáctico interactivo para el aprendizaje de la lectoescritura. Próximamente disponible.');
+                _leerTexto(
+                  'Libro Alfabetizacion. Material didáctico interactivo para el aprendizaje de la lectoescritura. Próximamente disponible.',
+                );
               },
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Card deshabilitada - Cuadernillo
             _buildActivityCard(
               titulo: "Cuadernillo",
-              descripcion: "Ejercicios prácticos para reforzar el aprendizaje de letras y palabras.",
+              descripcion:
+                  "Ejercicios prácticos para reforzar el aprendizaje de letras y palabras.",
               imagenAsset: "assets/imagenes/portada3.png",
               habilitado: false,
               colorBorde: const Color(0xFF9b9b9b),
               onTap: null,
               onRead: () {
-                _leerTexto('Cuadernillo. Ejercicios prácticos para reforzar el aprendizaje de letras y palabras. Próximamente disponible.');
+                _leerTexto(
+                  'Cuadernillo. Ejercicios prácticos para reforzar el aprendizaje de letras y palabras. Próximamente disponible.',
+                );
               },
             ),
-            
+
             const SizedBox(height: 16),
-            
-            // Card deshabilitada - nycm
+
+            // Card habilitada - NyCM
             _buildActivityCard(
               titulo: "NyCM",
-              descripcion: "Núcleo de Conocimiento Multidisciplinario. Actividades integradas para un aprendizaje completo.",
+              descripcion:
+                  "Núcleo de Conocimiento Multidisciplinario. Actividades integradas para un aprendizaje completo.",
               imagenAsset: "assets/imagenes/portada4.jpg",
-              habilitado: false,
-              colorBorde: const Color(0xFF9b9b9b),
-              onTap: null,
+              habilitado: true,
+              colorBorde: const Color(0xFF38b000),
+              onTap: () {
+                _logService.addLog(
+                  type: LogType.navegacion,
+                  message:
+                      'Actividad NyCM seleccionada - Navegando a Lección 16',
+                  details: {
+                    'actividad': 'NyCM',
+                    'destino': 'Leccion16LeeEnunciados',
+                  },
+                );
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const Leccion16LeeEnunciados(),
+                  ),
+                );
+              },
               onRead: () {
-                _leerTexto('NyCM. Núcleo de Conocimiento Multidisciplinario. Actividades integradas para un aprendizaje completo. Próximamente disponible.');
+                _leerTexto(
+                  'NyCM. Núcleo de Conocimiento Multidisciplinario. Actividades integradas para un aprendizaje completo.',
+                );
               },
             ),
           ],
         ),
       ),
-      
+
       // Barra de navegación inferior
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -362,10 +385,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,
           items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home),
-              label: 'Inicio',
-            ),
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
             BottomNavigationBarItem(
               icon: Icon(Icons.auto_stories),
               label: 'Actividades',
@@ -374,10 +394,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
               icon: Icon(Icons.menu_book),
               label: 'Lecciones',
             ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person),
-              label: 'Perfil',
-            ),
+            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
           ],
         ),
       ),
@@ -420,9 +437,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                 Container(
                   height: 140,
                   width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                  ),
+                  decoration: BoxDecoration(color: Colors.grey[200]),
                   child: Image.asset(
                     imagenAsset,
                     fit: BoxFit.cover,
@@ -469,7 +484,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                   ),
               ],
             ),
-            
+
             // Contenido
             Padding(
               padding: const EdgeInsets.all(16),
@@ -484,7 +499,9 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: habilitado ? const Color(0xFF134074) : const Color(0xFF9b9b9b),
+                            color: habilitado
+                                ? const Color(0xFF134074)
+                                : const Color(0xFF9b9b9b),
                           ),
                         ),
                       ),
@@ -494,14 +511,16 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: habilitado 
+                            color: habilitado
                                 ? const Color(0xFF38b000).withOpacity(0.1)
                                 : const Color(0xFF9b9b9b).withOpacity(0.1),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             Icons.volume_up,
-                            color: habilitado ? const Color(0xFF38b000) : const Color(0xFF9b9b9b),
+                            color: habilitado
+                                ? const Color(0xFF38b000)
+                                : const Color(0xFF9b9b9b),
                             size: 20,
                           ),
                         ),
@@ -513,19 +532,23 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                     descripcion,
                     style: TextStyle(
                       fontSize: 13,
-                      color: habilitado ? Colors.grey[600] : const Color(0xFF9b9b9b),
+                      color: habilitado
+                          ? Colors.grey[600]
+                          : const Color(0xFF9b9b9b),
                       height: 1.4,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Botón de acción
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: habilitado ? onTap : null,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: habilitado ? const Color(0xFF38b000) : const Color(0xFF9b9b9b),
+                        backgroundColor: habilitado
+                            ? const Color(0xFF38b000)
+                            : const Color(0xFF9b9b9b),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(

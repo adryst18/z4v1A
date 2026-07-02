@@ -31,8 +31,7 @@ class Leccion16LeeEnunciados extends StatefulWidget {
   const Leccion16LeeEnunciados({super.key});
 
   @override
-  State<Leccion16LeeEnunciados> createState() =>
-      _Leccion16LeeEnunciadosState();
+  State<Leccion16LeeEnunciados> createState() => _Leccion16LeeEnunciadosState();
 }
 
 class _Leccion16LeeEnunciadosState extends State<Leccion16LeeEnunciados> {
@@ -82,6 +81,7 @@ class _Leccion16LeeEnunciadosState extends State<Leccion16LeeEnunciados> {
   late List<bool?> _resultadoConteo;
 
   bool _hablando = false;
+  bool _mostrarLeccion = false; // controla si se despliegan los enunciados
 
   @override
   void initState() {
@@ -96,8 +96,10 @@ class _Leccion16LeeEnunciadosState extends State<Leccion16LeeEnunciados> {
     _tts.setCancelHandler(() => setState(() => _hablando = false));
 
     _palabraResaltada = List<int?>.filled(_frases.length, null);
-    _controladoresConteo =
-        List.generate(_frases.length, (_) => TextEditingController());
+    _controladoresConteo = List.generate(
+      _frases.length,
+      (_) => TextEditingController(),
+    );
     _resultadoConteo = List<bool?>.filled(_frases.length, null);
   }
 
@@ -140,7 +142,7 @@ class _Leccion16LeeEnunciadosState extends State<Leccion16LeeEnunciados> {
     return Scaffold(
       backgroundColor: const Color(0xFFFDF8F0),
       appBar: AppBar(
-        title: const Text('Lección 16'),
+        title: const Text('Lecciones'),
         backgroundColor: const Color(0xFF6FA8C9),
         foregroundColor: Colors.white,
       ),
@@ -150,57 +152,66 @@ class _Leccion16LeeEnunciadosState extends State<Leccion16LeeEnunciados> {
           children: [
             _buildIndicacion(),
             const SizedBox(height: 24),
-            for (int i = 0; i < _frases.length; i++) ...[
-              _buildFrase(i),
-              const SizedBox(height: 20),
+            if (_mostrarLeccion) ...[
+              for (int i = 0; i < _frases.length; i++) ...[
+                _buildFrase(i),
+                const SizedBox(height: 20),
+              ],
+              const Divider(height: 40, thickness: 1.2),
+              _buildPreguntas(),
             ],
-            const Divider(height: 40, thickness: 1.2),
-            _buildPreguntas(),
           ],
         ),
       ),
     );
   }
 
-  /// Indicación principal con botón de "escuchar".
+  /// Indicación principal con botón de "escuchar" y para desplegar la lección.
   Widget _buildIndicacion() {
     const texto =
         '16. Lee en voz alta los siguientes enunciados y menciona '
         'cuántas palabras los forman.';
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Text(
-              texto,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF2D2A26),
+    return GestureDetector(
+      onTap: () => setState(() => _mostrarLeccion = !_mostrarLeccion),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Text(
+                texto,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF2D2A26),
+                ),
               ),
             ),
-          ),
-          IconButton(
-            iconSize: 32,
-            color: const Color(0xFF6FA8C9),
-            icon: Icon(_hablando ? Icons.volume_up : Icons.volume_up_outlined),
-            tooltip: 'Escuchar indicación',
-            onPressed: () => _hablar(texto),
-          ),
-        ],
+            Icon(
+              _mostrarLeccion ? Icons.expand_less : Icons.expand_more,
+              color: const Color(0xFF6FA8C9),
+            ),
+            IconButton(
+              iconSize: 32,
+              color: const Color(0xFF6FA8C9),
+              icon: Icon(_hablando ? Icons.volume_up : Icons.volume_up_outlined),
+              tooltip: 'Escuchar indicación',
+              onPressed: () => _hablar(texto),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -349,10 +360,7 @@ class _Leccion16LeeEnunciadosState extends State<Leccion16LeeEnunciados> {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      pregunta,
-                      style: const TextStyle(fontSize: 16),
-                    ),
+                    child: Text(pregunta, style: const TextStyle(fontSize: 16)),
                   ),
                   IconButton(
                     icon: const Icon(Icons.volume_up_outlined),
