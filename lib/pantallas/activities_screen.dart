@@ -7,8 +7,7 @@ import 'package:sabia/pantallas/profile_screen.dart';
 import 'package:sabia/pantallas/config_voz_screen.dart';
 import 'package:sabia/pantallas/NyCM/vocales.dart';
 import 'package:sabia/pantallas/NyCM/hlilbro1.dart';
-import 'package:sabia/pantallas/NyCM/lecciones/leccion_16_lee_enunciados.dart';
-import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_que_pan.dart';
+import 'package:sabia/pantallas/NyCM/lecciones/leccion_lista_screen.dart';
 
 class ActivitiesScreen extends StatefulWidget {
   const ActivitiesScreen({super.key});
@@ -350,9 +349,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
 
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const Leccion16LeeEnunciados(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const LeccionListaScreen()),
                 );
               },
               onRead: () {

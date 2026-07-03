@@ -2,28 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 /// ============================================================
-/// LECCIÓN 17 — "¿Qué es? pan"
+/// LECCIÓN 17 — Parte 1 de 9 — "¿Qué es? pan"
 /// Introducción a la letra P / p.
+///
+/// La lección 17 completa abarca 9 páginas del cuadernillo.
+/// Esta pantalla corresponde solo a la primera:
 ///
 /// Página 25 del cuadernillo:
 ///   1. Traza las letras.
 ///   2. Encuentra la /p/ y enciérrala en un círculo.
 ///
-/// Ubicación sugerida: lib/pantallas/NyCM/lecciones/leccion_17_que_es_pan.dart
+/// Ubicación sugerida: lib/pantallas/NyCM/lecciones/leccion_17_1_que_pan.dart
 ///
 /// Requiere en pubspec.yaml (ya agregado en la lección 16):
 ///   dependencies:
 ///     flutter_tts: ^4.0.2
 /// ============================================================
 
-class Leccion17QueEsPan extends StatefulWidget {
-  const Leccion17QueEsPan({super.key});
+class Leccion17Parte1QueEsPan extends StatefulWidget {
+  const Leccion17Parte1QueEsPan({super.key});
 
   @override
-  State<Leccion17QueEsPan> createState() => _Leccion17QueEsPanState();
+  State<Leccion17Parte1QueEsPan> createState() => _Leccion17Parte1QueEsPanState();
 }
 
-class _Leccion17QueEsPanState extends State<Leccion17QueEsPan> {
+class _Leccion17Parte1QueEsPanState extends State<Leccion17Parte1QueEsPan> {
   late final FlutterTts _tts;
 
   // Cuadrícula de letras tal como aparece en el cuadernillo.
@@ -140,7 +143,7 @@ class _Leccion17QueEsPanState extends State<Leccion17QueEsPan> {
     return Scaffold(
       backgroundColor: const Color(0xFFFDF8F0),
       appBar: AppBar(
-        title: const Text('Lección 17'),
+        title: const Text('Lección 17 (1/9)'),
         backgroundColor: const Color(0xFF3DBFDA),
         foregroundColor: Colors.white,
       ),
