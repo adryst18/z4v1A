@@ -8,6 +8,7 @@ import 'package:sabia/pantallas/config_voz_screen.dart';
 import 'package:sabia/pantallas/NyCM/vocales.dart';
 import 'package:sabia/pantallas/NyCM/hlilbro1.dart';
 import 'package:sabia/pantallas/NyCM/lecciones/leccion_16_lee_enunciados.dart';
+import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_que_pan.dart';
 
 class ActivitiesScreen extends StatefulWidget {
   const ActivitiesScreen({super.key});
