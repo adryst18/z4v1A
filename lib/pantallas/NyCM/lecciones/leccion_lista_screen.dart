@@ -8,7 +8,7 @@ import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_3_ilumina_silabas.dart
 /// LISTA DE LECCIONES — NyCM
 ///
 /// Pantalla de menú que muestra todas las lecciones disponibles
-/// del núcleo NyCM.
+/// del núcleo NyCM. 
 ///
 /// Hay 2 tipos de tarjeta:
 ///  - Lección simple (ej. 16): toca la tarjeta y navega directo.
