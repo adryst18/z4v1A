@@ -3,6 +3,7 @@ import 'package:sabia/pantallas/NyCM/lecciones/leccion_16_lee_enunciados.dart';
 import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_1_que_pan.dart';
 import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_2_silabas_pa_pe_pi_po_pu.dart';
 import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_3_ilumina_silabas.dart';
+import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_4_nombra_imagenes.dart';
 
 /// ============================================================
 /// LISTA DE LECCIONES — NyCM
