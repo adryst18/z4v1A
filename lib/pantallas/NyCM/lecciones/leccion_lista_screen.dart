@@ -9,7 +9,7 @@ import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_4_nombra_imagenes.dart
 /// LISTA DE LECCIONES — NyCM
 ///
 /// Pantalla de menú que muestra todas las lecciones disponibles
-/// del núcleo NyCM. 
+/// del núcleo NyCM.
 ///
 /// Hay 2 tipos de tarjeta:
 ///  - Lección simple (ej. 16): toca la tarjeta y navega directo.
@@ -105,7 +105,11 @@ class _LeccionListaScreenState extends State<LeccionListaScreen> {
           titulo: 'Ilumina las sílabas',
           pantalla: const Leccion17_3IluminaSilabas(),
         ),
-        const _ParteLeccion(numero: 4, titulo: 'Próximamente'),
+        _ParteLeccion(
+          numero: 4,
+          titulo: 'Nombra las imágenes',
+          pantalla: const Leccion17_4NombraImagenes(),
+        ),
         const _ParteLeccion(numero: 5, titulo: 'Próximamente'),
         const _ParteLeccion(numero: 6, titulo: 'Próximamente'),
         const _ParteLeccion(numero: 7, titulo: 'Próximamente'),
