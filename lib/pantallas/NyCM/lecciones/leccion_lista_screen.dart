@@ -4,6 +4,7 @@ import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_1_que_pan.dart';
 import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_2_silabas_pa_pe_pi_po_pu.dart';
 import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_3_ilumina_silabas.dart';
 import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_4_nombra_imagenes.dart';
+import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_5_screen.dart';
 
 /// ============================================================
 /// LISTA DE LECCIONES — NyCM
@@ -110,7 +111,11 @@ class _LeccionListaScreenState extends State<LeccionListaScreen> {
           titulo: 'Nombra las imágenes',
           pantalla: const Leccion17_4NombraImagenes(),
         ),
-        const _ParteLeccion(numero: 5, titulo: 'Próximamente'),
+        _ParteLeccion(
+          numero: 5,
+          titulo: 'Palmeo de sílabas y abecedario móvil',
+          pantalla: const Leccion17_5Screen(),
+        ),
         const _ParteLeccion(numero: 6, titulo: 'Próximamente'),
         const _ParteLeccion(numero: 7, titulo: 'Próximamente'),
         const _ParteLeccion(numero: 8, titulo: 'Próximamente'),
