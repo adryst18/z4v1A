@@ -1,41 +1,43 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:audioplayers/audioplayers.dart'; 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:sabia/services/voice_service.dart';
 import 'package:sabia/services/log_service.dart';
 import 'package:sabia/models/log_entry.dart';
-import 'package:sabia/pantallas/NyCM/hlilbro1.dart'; 
-import 'package:sabia/pantallas/NyCM/travoe.dart';
+import 'package:sabia/pantallas/NyCM/hlilbro1.dart';
 
-class ZanahoriaAnimada {
+import 'package:sabia/pantallas/NyCM/travoami.dart' show TrazoAMinusculaScreen;
+
+class EloteAnimado {
   final Offset posicion;
   final double rotacion;
   final double escalaObjetivo;
   double escalaActual = 0.0;
 
-  ZanahoriaAnimada({
+  EloteAnimado({
     required this.posicion,
     required this.rotacion,
     required this.escalaObjetivo,
   });
 }
 
-class TrazoAMinusculaScreen extends StatefulWidget {
-  const TrazoAMinusculaScreen({super.key});
+class TrazoEScreen extends StatefulWidget {
+  const TrazoEScreen({super.key});
 
   @override
-  State<TrazoAMinusculaScreen> createState() => _TrazoAMinusculaScreenState();
+  State<TrazoEScreen> createState() => _TrazoEScreenState();
 }
 
-class _TrazoAMinusculaScreenState extends State<TrazoAMinusculaScreen> with TickerProviderStateMixin {
+class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMixin {
   final VoiceService _voiceService = VoiceService();
   final LogService _logService = LogService();
   final AudioPlayer _audioPlayerTractor = AudioPlayer();
+  final AudioPlayer _audioPlayerLapiz = AudioPlayer();
   
   List<List<Offset>> _trazos = [];
   List<Offset> _trazoActual = [];
-  List<ZanahoriaAnimada> _huertoZanahorias = [];
+  List<EloteAnimado> _huertoElotes = [];
   
   Offset? _posicionTractor;
   double _anguloTractor = 0.0;
@@ -50,15 +52,23 @@ class _TrazoAMinusculaScreenState extends State<TrazoAMinusculaScreen> with Tick
   int _totalMuestrasTomadas = 0;
 
   late AnimationController _semillasBlinkController;
-  late AnimationController _loopZanahoriasController;
-  late AnimationController _confetiController; 
+  late AnimationController _loopElotesController;
+  late AnimationController _demostracionController;
   
   int _faseTrazoActual = 0;
-  List<Offset> _puntosReferenciaCirculo = [];
-  List<Offset> _puntosReferenciaPalito = [];
   
-  List<bool> _cubiertosCirculo = [];
-  List<bool> _cubiertosPalito = [];
+  List<Offset> _puntosReferenciaVertical = [];
+  List<Offset> _puntosReferenciaSuperior = [];
+  List<Offset> _puntosReferenciaMedio = [];
+  List<Offset> _puntosReferenciaInferior = [];
+  
+  List<bool> _cubiertosVertical = [];
+  List<bool> _cubiertosSuperior = [];
+  List<bool> _cubiertosMedio = [];
+  List<bool> _cubiertosInferior = [];
+
+  bool _mostrandoDemostracion = false;
+  List<Offset> _trazoDemostracion = [];
 
   @override
   void initState() {
@@ -71,70 +81,74 @@ class _TrazoAMinusculaScreenState extends State<TrazoAMinusculaScreen> with Tick
       duration: const Duration(milliseconds: 700),
     )..repeat(reverse: true);
 
-    _loopZanahoriasController = AnimationController(
+    _loopElotesController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 16),
     )..addListener(() {
         setState(() {
-          for (var zanahoria in _huertoZanahorias) {
-            if (zanahoria.escalaActual < zanahoria.escalaObjetivo) {
-              zanahoria.escalaActual += 0.08;
-              if (zanahoria.escalaActual > zanahoria.escalaObjetivo) {
-                zanahoria.escalaActual = zanahoria.escalaObjetivo;
+          for (var elote in _huertoElotes) {
+            if (elote.escalaActual < elote.escalaObjetivo) {
+              elote.escalaActual += 0.08;
+              if (elote.escalaActual > elote.escalaObjetivo) {
+                elote.escalaActual = elote.escalaObjetivo;
               }
             }
           }
         });
       });
-    _loopZanahoriasController.repeat();
+    _loopElotesController.repeat();
 
-    _confetiController = AnimationController(
+    _demostracionController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(milliseconds: 2000),
     );
 
-    _voiceService.hablar('¡Ahora sembraremos la letra a minúscula! Sigue el círculo primero.');
+    _voiceService.hablar('Toca la letra E y luego sigue el camino del tractor');
   }
 
   @override
   void dispose() {
     _semillasBlinkController.dispose();
-    _loopZanahoriasController.dispose();
-    _confetiController.dispose();
+    _loopElotesController.dispose();
+    _demostracionController.dispose();
     _audioPlayerTractor.dispose();
+    _audioPlayerLapiz.dispose();
     _cronometro.stop();
     super.dispose();
   }
 
   void _generarPuntosReferenciaPorPartes() {
-    final double centroX = 150.0;
-    final double centroY = 240.0;
-    final double radio = 75.0;
+    final startX = 95.0;
+    final endX = 235.0;
+    final topY = 80.0;
+    final midY = 210.0;
+    final bottomY = 340.0;
     
-    _puntosReferenciaCirculo.clear();
-    _puntosReferenciaPalito.clear();
+    _puntosReferenciaVertical.clear();
+    _puntosReferenciaSuperior.clear();
+    _puntosReferenciaMedio.clear();
+    _puntosReferenciaInferior.clear();
 
-    // 1. Puntos del círculo
-    for (double i = 0; i <= 2 * math.pi; i += 0.25) {
-      double x = centroX + radio * math.cos(-i);
-      double y = centroY + radio * math.sin(-i);
-      _puntosReferenciaCirculo.add(Offset(x, y));
+    for (double t = 0; t <= 1; t += 0.06) {
+      _puntosReferenciaVertical.add(Offset(startX, topY + (t * (bottomY - topY))));
+    }
+    for (double t = 0.1; t <= 1; t += 0.1) {
+      _puntosReferenciaSuperior.add(Offset(startX + (t * (endX - startX)), topY));
+    }
+    for (double t = 0.1; t <= 0.85; t += 0.1) {
+      _puntosReferenciaMedio.add(Offset(startX + (t * (endX - startX)), midY));
+    }
+    for (double t = 0.1; t <= 1; t += 0.1) {
+      _puntosReferenciaInferior.add(Offset(startX + (t * (endX - startX)), bottomY));
     }
 
-    // 2. Puntos del palito derecho
-    double palitoX = centroX + radio;
-    double inicioY = centroY - radio;
-    double finY = centroY + radio + 10;
-    
-    for (double y = inicioY; y <= finY; y += 12.0) {
-      _puntosReferenciaPalito.add(Offset(palitoX, y));
-    }
-
-    _cubiertosCirculo = List.filled(_puntosReferenciaCirculo.length, false);
-    _cubiertosPalito = List.filled(_puntosReferenciaPalito.length, false);
+    _cubiertosVertical = List.filled(_puntosReferenciaVertical.length, false);
+    _cubiertosSuperior = List.filled(_puntosReferenciaSuperior.length, false);
+    _cubiertosMedio = List.filled(_puntosReferenciaMedio.length, false);
+    _cubiertosInferior = List.filled(_puntosReferenciaInferior.length, false);
     
     _faseTrazoActual = 0; 
-    _posicionTractor = _puntosReferenciaCirculo.first;
+    _posicionTractor = Offset(startX, topY);
     
     _porcentajePrecision = 0.0;
     _sumaPrecisionMuestras = 0.0;
@@ -154,8 +168,70 @@ class _TrazoAMinusculaScreenState extends State<TrazoAMinusculaScreen> with Tick
     await _audioPlayerTractor.stop();
   }
 
+  Future<void> _reproducirSonidoLapiz() async {
+    try {
+      await _audioPlayerLapiz.setReleaseMode(ReleaseMode.loop);
+      await _audioPlayerLapiz.play(AssetSource('sounds/lapiz.mp3'));
+    } catch (e) {
+      debugPrint('Error cargando audio de lápiz: $e');
+    }
+  }
+
+  Future<void> _detenerSonidoLapiz() async {
+    await _audioPlayerLapiz.stop();
+  }
+
+  void _pronunciarLetraE() {
+    _voiceService.hablar('E');
+  }
+
+  Future<void> _iniciarDemostracion() async {
+    setState(() {
+      _mostrandoDemostracion = true;
+      _trazoDemostracion.clear();
+    });
+    
+    await _reproducirSonidoLapiz();
+    
+    await _demostrarTrazo(_puntosReferenciaVertical, 0);
+    await Future.delayed(const Duration(milliseconds: 300));
+    
+    await _demostrarTrazo(_puntosReferenciaSuperior, 1);
+    await Future.delayed(const Duration(milliseconds: 300));
+    
+    await _demostrarTrazo(_puntosReferenciaMedio, 2);
+    await Future.delayed(const Duration(milliseconds: 300));
+    
+    await _demostrarTrazo(_puntosReferenciaInferior, 3);
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    await _detenerSonidoLapiz();
+    
+    setState(() {
+      _mostrandoDemostracion = false;
+      _trazoDemostracion.clear();
+    });
+    
+    _voiceService.hablar('Ahora te toca a ti');
+  }
+
+  Future<void> _demostrarTrazo(List<Offset> puntos, int fase) async {
+    _demostracionController.reset();
+    _demostracionController.addListener(() {
+      if (mounted) {
+        setState(() {
+          int indiceActual = (puntos.length * _demostracionController.value).floor();
+          _trazoDemostracion = puntos.sublist(0, indiceActual.clamp(0, puntos.length));
+        });
+      }
+    });
+    
+    await _demostracionController.forward();
+    _demostracionController.removeListener(() {});
+  }
+
   void _iniciarNuevoTrazo(Offset puntoInicial) {
-    if (_completadoExitosamente) return;
+    if (_completadoExitosamente || _mostrandoDemostracion) return;
     _encenderMotorTractor();
 
     if (!_cronometro.isRunning) {
@@ -184,9 +260,9 @@ class _TrazoAMinusculaScreenState extends State<TrazoAMinusculaScreen> with Tick
       _trazoActual.add(puntoActual);
       _evaluarPrecisionMuestraContinua(puntoActual);
 
-      if (_trazoActual.length % 3 == 0) {
-        _huertoZanahorias.add(
-          ZanahoriaAnimada(
+      if (_trazoActual.length % 5 == 0) {
+        _huertoElotes.add(
+          EloteAnimado(
             posicion: puntoActual,
             rotacion: (math.Random().nextDouble() * 0.4) - 0.2,
             escalaObjetivo: 1.1,
@@ -205,21 +281,33 @@ class _TrazoAMinusculaScreenState extends State<TrazoAMinusculaScreen> with Tick
     const double maxCanalSombreado = 32.0; 
     double menorDistanciaALineaCentro = double.infinity;
 
-    for (var p in _puntosReferenciaCirculo) {
-      double d = (posicionTractor - p).distance;
-      if (d < menorDistanciaALineaCentro) menorDistanciaALineaCentro = d;
-    }
-    for (var p in _puntosReferenciaPalito) {
-      double d = (posicionTractor - p).distance;
-      if (d < menorDistanciaALineaCentro) menorDistanciaALineaCentro = d;
+    if (_faseTrazoActual == 0) {
+      for (var p in _puntosReferenciaVertical) {
+        double d = (posicionTractor - p).distance;
+        if (d < menorDistanciaALineaCentro) menorDistanciaALineaCentro = d;
+      }
+    } else if (_faseTrazoActual == 1) {
+      for (var p in _puntosReferenciaSuperior) {
+        double d = (posicionTractor - p).distance;
+        if (d < menorDistanciaALineaCentro) menorDistanciaALineaCentro = d;
+      }
+    } else if (_faseTrazoActual == 2) {
+      for (var p in _puntosReferenciaMedio) {
+        double d = (posicionTractor - p).distance;
+        if (d < menorDistanciaALineaCentro) menorDistanciaALineaCentro = d;
+      }
+    } else if (_faseTrazoActual == 3) {
+      for (var p in _puntosReferenciaInferior) {
+        double d = (posicionTractor - p).distance;
+        if (d < menorDistanciaALineaCentro) menorDistanciaALineaCentro = d;
+      }
     }
 
     double precisionMuestra = 0.0;
-    // CORREGIDO: Ajustado exactamente a 10.0 de tolerancia
-    if (menorDistanciaALineaCentro <= 10.0) {
+    if (menorDistanciaALineaCentro <= 14.0) {
       precisionMuestra = 100.0; 
     } else if (menorDistanciaALineaCentro <= maxCanalSombreado) {
-      precisionMuestra = 100.0 * (1.0 - ((menorDistanciaALineaCentro - 10.0) / (maxCanalSombreado - 10.0)));
+      precisionMuestra = 100.0 * (1.0 - ((menorDistanciaALineaCentro - 14.0) / (maxCanalSombreado - 14.0)));
     } else {
       precisionMuestra = 0.0; 
     }
@@ -228,25 +316,44 @@ class _TrazoAMinusculaScreenState extends State<TrazoAMinusculaScreen> with Tick
     _totalMuestrasTomadas++;
 
     if (_faseTrazoActual == 0) {
-      for (int i = 0; i < _puntosReferenciaCirculo.length; i++) {
-        if ((posicionTractor - _puntosReferenciaCirculo[i]).distance < maxCanalSombreado) {
-          _cubiertosCirculo[i] = true;
+      for (int i = 0; i < _puntosReferenciaVertical.length; i++) {
+        if ((posicionTractor - _puntosReferenciaVertical[i]).distance < maxCanalSombreado) {
+          _cubiertosVertical[i] = true;
         }
       }
-      if (!_cubiertosCirculo.contains(false)) {
+      if (!_cubiertosVertical.contains(false)) {
         setState(() => _faseTrazoActual = 1); 
-        _voiceService.hablar('¡Estupendo! Ahora haz la línea recta hacia abajo.');
+        _voiceService.hablar('¡Bien! Ahora la línea de arriba.');
       }
     } else if (_faseTrazoActual == 1) {
-      for (int i = 0; i < _puntosReferenciaPalito.length; i++) {
-        if ((posicionTractor - _puntosReferenciaPalito[i]).distance < maxCanalSombreado) {
-          _cubiertosPalito[i] = true;
+      for (int i = 0; i < _puntosReferenciaSuperior.length; i++) {
+        if ((posicionTractor - _puntosReferenciaSuperior[i]).distance < maxCanalSombreado) {
+          _cubiertosSuperior[i] = true;
+        }
+      }
+      if (!_cubiertosSuperior.contains(false)) {
+        setState(() => _faseTrazoActual = 2); 
+        _voiceService.hablar('Excelente, ahora la línea del medio.');
+      }
+    } else if (_faseTrazoActual == 2) {
+      for (int i = 0; i < _puntosReferenciaMedio.length; i++) {
+        if ((posicionTractor - _puntosReferenciaMedio[i]).distance < maxCanalSombreado) {
+          _cubiertosMedio[i] = true;
+        }
+      }
+      if (!_cubiertosMedio.contains(false)) {
+        setState(() => _faseTrazoActual = 3); 
+        _voiceService.hablar('¡Último paso! Haz la línea de abajo.');
+      }
+    } else if (_faseTrazoActual == 3) {
+      for (int i = 0; i < _puntosReferenciaInferior.length; i++) {
+        if ((posicionTractor - _puntosReferenciaInferior[i]).distance < maxCanalSombreado) {
+          _cubiertosInferior[i] = true;
         }
       }
     }
 
     setState(() {
-      // CORREGIDO: Error de dedo corregido a '_totalMuestrasTomadas'
       _porcentajePrecision = _totalMuestrasTomadas > 0 
           ? (_sumaPrecisionMuestras / _totalMuestrasTomadas) 
           : 0.0;
@@ -284,8 +391,7 @@ class _TrazoAMinusculaScreenState extends State<TrazoAMinusculaScreen> with Tick
       estrellasGanadas = 2;
     }
 
-    _confetiController.forward(from: 0.0);
-    _voiceService.hablar('¡Felicidades, lograste escribir la a minúscula!');
+    _voiceService.hablar('E, que se pronuncia "eee"');
 
     showDialog(
       context: context,
@@ -294,7 +400,7 @@ class _TrazoAMinusculaScreenState extends State<TrazoAMinusculaScreen> with Tick
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         backgroundColor: Colors.white,
         title: const Text(
-          '¡Excelente Trabajo!', 
+          'Resultado del Trazo', 
           style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF134074)),
           textAlign: TextAlign.center
         ),
@@ -350,7 +456,8 @@ class _TrazoAMinusculaScreenState extends State<TrazoAMinusculaScreen> with Tick
                 },
                 icon: const Icon(Icons.home, size: 28),
               ),
-               IconButton(
+
+              IconButton(
                 style: IconButton.styleFrom(
                   backgroundColor: const Color(0xFF4caf50),
                   foregroundColor: Colors.white,
@@ -361,7 +468,7 @@ class _TrazoAMinusculaScreenState extends State<TrazoAMinusculaScreen> with Tick
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const TrazoEScreen())
+                    MaterialPageRoute(builder: (context) => const TrazoAMinusculaScreen()),
                   );
                 },
                 icon: const Icon(Icons.arrow_forward, size: 28),
@@ -377,7 +484,7 @@ class _TrazoAMinusculaScreenState extends State<TrazoAMinusculaScreen> with Tick
     setState(() {
       _trazos.clear();
       _trazoActual.clear();
-      _huertoZanahorias.clear();
+      _huertoElotes.clear();
       _completadoExitosamente = false;
       _intentosFallidos = 0;
       _cronometro.reset();
@@ -391,7 +498,7 @@ class _TrazoAMinusculaScreenState extends State<TrazoAMinusculaScreen> with Tick
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         backgroundColor: const Color(0xFF134074),
-        title: const Text('SABIA - Letra a minúscula', style: TextStyle(color: Colors.white)),
+        title: const Text('SABIA - Letra E', style: TextStyle(color: Colors.white)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white), 
           onPressed: () => Navigator.pop(context),
@@ -411,6 +518,37 @@ class _TrazoAMinusculaScreenState extends State<TrazoAMinusculaScreen> with Tick
                   ],
                 ),
               ),
+              
+              GestureDetector(
+                onTap: _pronunciarLetraE,
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF99d98c),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      )
+                    ],
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'E',
+                      style: TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF134074),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
 
               Expanded(
                 child: Center(
@@ -441,26 +579,32 @@ class _TrazoAMinusculaScreenState extends State<TrazoAMinusculaScreen> with Tick
                               animation: _semillasBlinkController,
                               builder: (context, child) {
                                 return CustomPaint(
-                                  painter: MontessoriMinusculaPainter(
+                                  painter: MontessoriPainter(
                                     trazos: _trazos,
                                     trazoActual: _trazoActual,
-                                    huerto: _huertoZanahorias,
-                                    refCirculo: _puntosReferenciaCirculo,
-                                    refPalito: _puntosReferenciaPalito,
-                                    cubiertosCirculo: _cubiertosCirculo,
-                                    cubiertosPalito: _cubiertosPalito,
+                                    huerto: _huertoElotes,
+                                    refVertical: _puntosReferenciaVertical,
+                                    refSuperior: _puntosReferenciaSuperior,
+                                    refMedio: _puntosReferenciaMedio,
+                                    refInferior: _puntosReferenciaInferior,
+                                    cubiertosVertical: _cubiertosVertical,
+                                    cubiertosSuperior: _cubiertosSuperior,
+                                    cubiertosMedio: _cubiertosMedio,
+                                    cubiertosInferior: _cubiertosInferior,
                                     faseActual: _faseTrazoActual,
                                     factorParpadeo: _semillasBlinkController.value,
+                                    trazosDemostracion: _trazoDemostracion,
+                                    mostrandoDemostracion: _mostrandoDemostracion,
                                   ),
                                   size: Size.infinite,
                                 );
                               },
                             ),
 
-                            if (_posicionTractor != null)
+                            if (_posicionTractor != null && !_mostrandoDemostracion)
                               Positioned(
-                                left: _posicionTractor!.dx - 28,
-                                top: _posicionTractor!.dy - 28,
+                                left: _posicionTractor!.dx - 24,
+                                top: _posicionTractor!.dy - 24,
                                 child: Transform.rotate(
                                   angle: _anguloTractor,
                                   child: AnimatedScale(
@@ -473,8 +617,8 @@ class _TrazoAMinusculaScreenState extends State<TrazoAMinusculaScreen> with Tick
                                         shape: BoxShape.circle,
                                         boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)], 
                                       ),
-                                      padding: const EdgeInsets.all(6),
-                                      child: const Icon(Icons.agriculture, size: 38, color: Colors.white),
+                                      padding: const EdgeInsets.all(4),
+                                      child: const Icon(Icons.agriculture, size: 36, color: Colors.white),
                                     ),
                                   ),
                                 ),
@@ -494,9 +638,24 @@ class _TrazoAMinusculaScreenState extends State<TrazoAMinusculaScreen> with Tick
                   children: [
                     IconButton(
                       style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xFFFFD54F),
+                        foregroundColor: const Color(0xFF134074),
+                        padding: const EdgeInsets.all(14),
+                        fixedSize: const Size(56, 56),
+                      ),
+                      onPressed: _mostrandoDemostracion ? null : _iniciarDemostracion,
+                      icon: Icon(
+                        _mostrandoDemostracion ? Icons.hourglass_empty : Icons.play_arrow,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    IconButton(
+                      style: IconButton.styleFrom(
                         backgroundColor: Colors.red[400], 
                         foregroundColor: Colors.white, 
-                        padding: const EdgeInsets.all(14)
+                        padding: const EdgeInsets.all(14),
+                        fixedSize: const Size(56, 56),
                       ),
                       onPressed: _reiniciarTodo,
                       icon: const Icon(Icons.delete_sweep, size: 28),
@@ -506,7 +665,8 @@ class _TrazoAMinusculaScreenState extends State<TrazoAMinusculaScreen> with Tick
                       style: IconButton.styleFrom(
                         backgroundColor: Colors.blue[600], 
                         foregroundColor: Colors.white, 
-                        padding: const EdgeInsets.all(14)
+                        padding: const EdgeInsets.all(14),
+                        fixedSize: const Size(56, 56),
                       ),
                       onPressed: _ejecutarCalificacionYVentana,
                       icon: const Icon(Icons.fact_check, size: 28),
@@ -516,19 +676,6 @@ class _TrazoAMinusculaScreenState extends State<TrazoAMinusculaScreen> with Tick
               ),
             ],
           ),
-
-          IgnorePointer(
-            child: AnimatedBuilder(
-              animation: _confetiController,
-              builder: (context, child) {
-                if (!_confetiController.isAnimating) return const SizedBox.shrink();
-                return CustomPaint(
-                  painter: ConfetiPainter(progreso: _confetiController.value),
-                  size: Size.infinite,
-                );
-              },
-            ),
-          )
         ],
       ),
     );
@@ -559,44 +706,52 @@ class _TrazoAMinusculaScreenState extends State<TrazoAMinusculaScreen> with Tick
   }
 }
 
-class MontessoriMinusculaPainter extends CustomPainter {
+class MontessoriPainter extends CustomPainter {
   final List<List<Offset>> trazos;
   final List<Offset> trazoActual;
-  final List<ZanahoriaAnimada> huerto;
+  final List<EloteAnimado> huerto;
   
-  final List<Offset> refCirculo;
-  final List<Offset> refPalito;
+  final List<Offset> refVertical;
+  final List<Offset> refSuperior;
+  final List<Offset> refMedio;
+  final List<Offset> refInferior;
   
-  final List<bool> cubiertosCirculo;
-  final List<bool> cubiertosPalito;
+  final List<bool> cubiertosVertical;
+  final List<bool> cubiertosSuperior;
+  final List<bool> cubiertosMedio;
+  final List<bool> cubiertosInferior;
   
   final int faseActual;
   final double factorParpadeo;
+  final List<Offset> trazosDemostracion;
+  final bool mostrandoDemostracion;
 
-  MontessoriMinusculaPainter({
+  MontessoriPainter({
     required this.trazos,
     required this.trazoActual,
     required this.huerto,
-    required this.refCirculo,
-    required this.refPalito,
-    required this.cubiertosCirculo,
-    required this.cubiertosPalito,
+    required this.refVertical,
+    required this.refSuperior,
+    required this.refMedio,
+    required this.refInferior,
+    required this.cubiertosVertical,
+    required this.cubiertosSuperior,
+    required this.cubiertosMedio,
+    required this.cubiertosInferior,
     required this.faseActual,
     required this.factorParpadeo,
+    required this.trazosDemostracion,
+    required this.mostrandoDemostracion,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final double centroX = 150.0;
-    final double centroY = 240.0;
-    final double radio = 75.0;
-
     final shadowPaint = Paint()
       ..color = const Color(0xFF55a644)
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round
-      ..strokeWidth = 64.0; 
+      ..strokeWidth = 64.0;
 
     final letterPaint = Paint()
       ..color = const Color(0xFFb7e4c7)
@@ -605,105 +760,112 @@ class MontessoriMinusculaPainter extends CustomPainter {
       ..strokeJoin = StrokeJoin.round
       ..strokeWidth = 50.0;
 
-    final pathCirculo = Path()
-      ..addOval(Rect.fromCircle(center: Offset(centroX, centroY), radius: radio));
+    final startX = 95.0;
+    final endX = 235.0;
+    final topY = 80.0;
+    final midY = 210.0;
+    final bottomY = 340.0;
 
-    final pathPalito = Path()
-      ..moveTo(centroX + radio, centroY - radio)
-      ..lineTo(centroX + radio, centroY + radio + 10);
+    final pathE = Path()
+      ..moveTo(startX, topY)
+      ..lineTo(startX, bottomY) 
+      ..moveTo(startX, topY)
+      ..lineTo(endX, topY)      
+      ..moveTo(startX, midY)
+      ..lineTo(startX + (endX - startX) * 0.85, midY) 
+      ..moveTo(startX, bottomY)
+      ..lineTo(endX, bottomY);    
 
-    canvas.drawPath(pathCirculo, shadowPaint);
-    canvas.drawPath(pathPalito, shadowPaint);
-    canvas.drawPath(pathCirculo, letterPaint);
-    canvas.drawPath(pathPalito, letterPaint);
+    canvas.drawPath(pathE, shadowPaint);
+    canvas.drawPath(pathE, letterPaint);
 
-    final paintTierra = Paint()
-      ..color = const Color(0xFF4a3319)
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..strokeWidth = 44.0;
+    if (!mostrandoDemostracion) {
+      final paintTierra = Paint()
+        ..color = const Color(0xFF4a3319)
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..strokeWidth = 44.0;
 
-    for (var trazo in trazos) {
-      if (trazo.length > 1) {
-        final path = Path()..moveTo(trazo.first.dx, trazo.first.dy);
-        for (int i = 1; i < trazo.length; i++) {
-          path.lineTo(trazo[i].dx, trazo[i].dy);
+      for (var trazo in trazos) {
+        if (trazo.length > 1) {
+          final path = Path()..moveTo(trazo.first.dx, trazo.first.dy);
+          for (int i = 1; i < trazo.length; i++) {
+            path.lineTo(trazo[i].dx, trazo[i].dy);
+          }
+          canvas.drawPath(path, paintTierra);
         }
-        canvas.drawPath(path, paintTierra);
+      }
+
+      if (trazoActual.length > 1) {
+        final pathActual = Path()..moveTo(trazoActual.first.dx, trazoActual.first.dy);
+        for (int i = 1; i < trazoActual.length; i++) {
+          pathActual.lineTo(trazoActual[i].dx, trazoActual[i].dy);
+        }
+        canvas.drawPath(pathActual, paintTierra);
+      }
+
+      final paintSemilla = Paint()
+        ..color = const Color(0xFFFFEE58).withOpacity(0.4 + (factorParpadeo * 0.6))
+        ..style = PaintingStyle.fill;
+
+      if (faseActual == 0) {
+        for (int i = 0; i < refVertical.length; i++) {
+          if (!cubiertosVertical[i]) canvas.drawCircle(refVertical[i], 5.0 + (factorParpadeo * 3), paintSemilla);
+        }
+      } else if (faseActual == 1) {
+        for (int i = 0; i < refSuperior.length; i++) {
+          if (!cubiertosSuperior[i]) canvas.drawCircle(refSuperior[i], 5.0 + (factorParpadeo * 3), paintSemilla);
+        }
+      } else if (faseActual == 2) {
+        for (int i = 0; i < refMedio.length; i++) {
+          if (!cubiertosMedio[i]) canvas.drawCircle(refMedio[i], 5.0 + (factorParpadeo * 3), paintSemilla);
+        }
+      } else if (faseActual == 3) {
+        for (int i = 0; i < refInferior.length; i++) {
+          if (!cubiertosInferior[i]) canvas.drawCircle(refInferior[i], 5.0 + (factorParpadeo * 3), paintSemilla);
+        }
       }
     }
 
-    if (trazoActual.length > 1) {
-      final pathActual = Path()..moveTo(trazoActual.first.dx, trazoActual.first.dy);
-      for (int i = 1; i < trazoActual.length; i++) {
-        pathActual.lineTo(trazoActual[i].dx, trazoActual[i].dy);
+    if (mostrandoDemostracion && trazosDemostracion.length > 1) {
+      final paintDemostracion = Paint()
+        ..color = const Color(0xFF55a644).withOpacity(0.8)
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..strokeWidth = 40.0;
+
+      final pathDemostracion = Path()
+        ..moveTo(trazosDemostracion.first.dx, trazosDemostracion.first.dy);
+      for (int i = 1; i < trazosDemostracion.length; i++) {
+        pathDemostracion.lineTo(trazosDemostracion[i].dx, trazosDemostracion[i].dy);
       }
-      canvas.drawPath(pathActual, paintTierra);
+      canvas.drawPath(pathDemostracion, paintDemostracion);
     }
 
-    final paintSemilla = Paint()
-      ..color = const Color(0xFFFFEE58).withOpacity(0.4 + (factorParpadeo * 0.6))
-      ..style = PaintingStyle.fill;
+    if (!mostrandoDemostracion) {
+      for (var elote in huerto) {
+        if (elote.escalaActual > 0.05) {
+          canvas.save();
+          canvas.translate(elote.posicion.dx, elote.posicion.dy);
+          canvas.rotate(elote.rotacion);
+          canvas.scale(elote.escalaActual);
 
-    if (faseActual == 0) {
-      for (int i = 0; i < refCirculo.length; i++) {
-        if (!cubiertosCirculo[i]) canvas.drawCircle(refCirculo[i], 5.0 + (factorParpadeo * 3), paintSemilla);
-      }
-    } else if (faseActual == 1) {
-      for (int i = 0; i < refPalito.length; i++) {
-        if (!cubiertosPalito[i]) canvas.drawCircle(refPalito[i], 5.0 + (factorParpadeo * 3), paintSemilla);
-      }
-    }
+          final textPainter = TextPainter(
+            text: const TextSpan(text: '🌽', style: TextStyle(fontSize: 32)),
+            textDirection: TextDirection.ltr,
+          )..layout();
 
-    for (var zanahoria in huerto) {
-      if (zanahoria.escalaActual > 0.05) {
-        canvas.save();
-        canvas.translate(zanahoria.posicion.dx, zanahoria.posicion.dy);
-        canvas.rotate(zanahoria.rotacion);
-        canvas.scale(zanahoria.escalaActual);
-
-        final textPainter = TextPainter(
-          text: const TextSpan(text: '🥕', style: TextStyle(fontSize: 24)),
-          textDirection: TextDirection.ltr,
-        )..layout();
-
-        textPainter.paint(canvas, Offset(-textPainter.width / 2, -textPainter.height / 2));
-        canvas.restore();
+          textPainter.paint(canvas, Offset(-textPainter.width / 2, -textPainter.height / 2));
+          canvas.restore();
+        }
       }
     }
   }
 
   @override
-  bool shouldRepaint(covariant MontessoriMinusculaPainter oldDelegate) => true;
-}
-
-class ConfetiPainter extends CustomPainter {
-  final double progreso;
-  ConfetiPainter({required this.progreso});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final random = math.Random(12345);
-    final paintStar = Paint()..style = PaintingStyle.fill;
-
-    for (int i = 0; i < 30; i++) {
-      double startX = size.width / 2;
-      double startY = size.height / 2;
-      
-      double angulo = random.nextDouble() * 2 * math.pi;
-      double velocidad = 80.0 + random.nextDouble() * 150.0;
-      
-      double currentX = startX + math.cos(angulo) * velocidad * progreso;
-      double currentY = startY + math.sin(angulo) * velocidad * progreso + (progreso * progreso * 60.0); 
-
-      paintStar.color = Colors.primaries[random.nextInt(Colors.primaries.length)].withOpacity(1.0 - progreso);
-      canvas.drawCircle(Offset(currentX, currentY), 6.0 * (1.0 - progreso), paintStar);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant ConfetiPainter oldDelegate) => true;
+  bool shouldRepaint(covariant MontessoriPainter oldDelegate) => true;
 }
 
 class SecuencialEstrellasWidget extends StatefulWidget {

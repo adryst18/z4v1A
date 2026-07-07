@@ -7,22 +7,15 @@ import 'package:sabia/services/log_service.dart';
 import 'package:sabia/models/log_entry.dart';
 import 'package:sabia/pantallas/NyCM/hlilbro1.dart';
 
-// Ocultamos los duplicados para solucionar el ambiguous_import de las capturas image_dd8ac1.png e image_dd8a9e.png
-import 'package:sabia/pantallas/NyCM/travoa.dart' hide SecuencialEstrellasWidget, ParticulaConfeti;
-import 'package:sabia/pantallas/NyCM/travoami.dart' hide SecuencialEstrellasWidget, ParticulaConfeti;
-import 'package:sabia/pantallas/NyCM/travoemi.dart' hide SecuencialEstrellasWidget, ParticulaConfeti;
+import 'package:sabia/pantallas/NyCM/travoami.dart';
 
-// Importaciones necesarias de tus otros archivos y el componente centralizado
-import 'package:sabia/pantallas/NyCM/travoemi.dart' show TrazoEMIScreen;
-import 'package:sabia/pantallas/NyCM/componentes_trazo.dart';
-
-class RabanoAnimado {
+class EloteAnimado {
   final Offset posicion;
   final double rotacion;
   final double escalaObjetivo;
   double escalaActual = 0.0;
 
-  RabanoAnimado({
+  EloteAnimado({
     required this.posicion,
     required this.rotacion,
     required this.escalaObjetivo,
@@ -40,11 +33,11 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
   final VoiceService _voiceService = VoiceService();
   final LogService _logService = LogService();
   final AudioPlayer _audioPlayerTractor = AudioPlayer();
-  final AudioPlayer _audioPlayerEfectos = AudioPlayer();
+  final AudioPlayer _audioPlayerLapiz = AudioPlayer();
   
   List<List<Offset>> _trazos = [];
   List<Offset> _trazoActual = [];
-  List<RabanoAnimado> _huertoRabanos = [];
+  List<EloteAnimado> _huertoElotes = [];
   
   Offset? _posicionTractor;
   double _anguloTractor = 0.0;
@@ -59,12 +52,11 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
   int _totalMuestrasTomadas = 0;
 
   late AnimationController _semillasBlinkController;
-  late AnimationController _loopRabanosController;
+  late AnimationController _loopElotesController;
+  late AnimationController _demostracionController;
   
   int _faseTrazoActual = 0;
-  int _estrellasVisiblesAnimacion = 0;
   
-  // Puntos de referencia para las 4 fases de la E Mayúscula
   List<Offset> _puntosReferenciaVertical = [];
   List<Offset> _puntosReferenciaSuperior = [];
   List<Offset> _puntosReferenciaMedio = [];
@@ -74,6 +66,9 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
   List<bool> _cubiertosSuperior = [];
   List<bool> _cubiertosMedio = [];
   List<bool> _cubiertosInferior = [];
+
+  bool _mostrandoDemostracion = false;
+  List<Offset> _trazoDemostracion = [];
 
   @override
   void initState() {
@@ -86,32 +81,38 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
       duration: const Duration(milliseconds: 700),
     )..repeat(reverse: true);
 
-    _loopRabanosController = AnimationController(
+    _loopElotesController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 16),
     )..addListener(() {
         setState(() {
-          for (var rabano in _huertoRabanos) {
-            if (rabano.escalaActual < rabano.escalaObjetivo) {
-              rabano.escalaActual += 0.08;
-              if (rabano.escalaActual > rabano.escalaObjetivo) {
-                rabano.escalaActual = rabano.escalaObjetivo;
+          for (var elote in _huertoElotes) {
+            if (elote.escalaActual < elote.escalaObjetivo) {
+              elote.escalaActual += 0.08;
+              if (elote.escalaActual > elote.escalaObjetivo) {
+                elote.escalaActual = elote.escalaObjetivo;
               }
             }
           }
         });
       });
-    _loopRabanosController.repeat();
+    _loopElotesController.repeat();
 
-    _voiceService.hablar('¡Conduce el tractor siguiendo el orden de las semillas amarillas!');
+    _demostracionController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    );
+
+    _voiceService.hablar('Toca la letra E y luego sigue el camino del tractor');
   }
 
   @override
   void dispose() {
     _semillasBlinkController.dispose();
-    _loopRabanosController.dispose();
+    _loopElotesController.dispose();
+    _demostracionController.dispose();
     _audioPlayerTractor.dispose();
-    _audioPlayerEfectos.dispose();
+    _audioPlayerLapiz.dispose();
     _cronometro.stop();
     super.dispose();
   }
@@ -128,19 +129,15 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
     _puntosReferenciaMedio.clear();
     _puntosReferenciaInferior.clear();
 
-    // 1. Línea Vertical (Descendente)
     for (double t = 0; t <= 1; t += 0.06) {
       _puntosReferenciaVertical.add(Offset(startX, topY + (t * (bottomY - topY))));
     }
-    // 2. Barra Superior (Horizontal Izq -> Der)
     for (double t = 0.1; t <= 1; t += 0.1) {
       _puntosReferenciaSuperior.add(Offset(startX + (t * (endX - startX)), topY));
     }
-    // 3. Barra Central (Horizontal Izq -> Der)
     for (double t = 0.1; t <= 0.85; t += 0.1) {
       _puntosReferenciaMedio.add(Offset(startX + (t * (endX - startX)), midY));
     }
-    // 4. Barra Inferior (Horizontal Izq -> Der)
     for (double t = 0.1; t <= 1; t += 0.1) {
       _puntosReferenciaInferior.add(Offset(startX + (t * (endX - startX)), bottomY));
     }
@@ -171,8 +168,70 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
     await _audioPlayerTractor.stop();
   }
 
+  Future<void> _reproducirSonidoLapiz() async {
+    try {
+      await _audioPlayerLapiz.setReleaseMode(ReleaseMode.loop);
+      await _audioPlayerLapiz.play(AssetSource('sounds/lapiz.mp3'));
+    } catch (e) {
+      debugPrint('Error cargando audio de lápiz: $e');
+    }
+  }
+
+  Future<void> _detenerSonidoLapiz() async {
+    await _audioPlayerLapiz.stop();
+  }
+
+  void _pronunciarLetraE() {
+    _voiceService.hablar('E');
+  }
+
+  Future<void> _iniciarDemostracion() async {
+    setState(() {
+      _mostrandoDemostracion = true;
+      _trazoDemostracion.clear();
+    });
+    
+    await _reproducirSonidoLapiz();
+    
+    await _demostrarTrazo(_puntosReferenciaVertical, 0);
+    await Future.delayed(const Duration(milliseconds: 300));
+    
+    await _demostrarTrazo(_puntosReferenciaSuperior, 1);
+    await Future.delayed(const Duration(milliseconds: 300));
+    
+    await _demostrarTrazo(_puntosReferenciaMedio, 2);
+    await Future.delayed(const Duration(milliseconds: 300));
+    
+    await _demostrarTrazo(_puntosReferenciaInferior, 3);
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    await _detenerSonidoLapiz();
+    
+    setState(() {
+      _mostrandoDemostracion = false;
+      _trazoDemostracion.clear();
+    });
+    
+    _voiceService.hablar('Ahora te toca a ti');
+  }
+
+  Future<void> _demostrarTrazo(List<Offset> puntos, int fase) async {
+    _demostracionController.reset();
+    _demostracionController.addListener(() {
+      if (mounted) {
+        setState(() {
+          int indiceActual = (puntos.length * _demostracionController.value).floor();
+          _trazoDemostracion = puntos.sublist(0, indiceActual.clamp(0, puntos.length));
+        });
+      }
+    });
+    
+    await _demostracionController.forward();
+    _demostracionController.removeListener(() {});
+  }
+
   void _iniciarNuevoTrazo(Offset puntoInicial) {
-    if (_completadoExitosamente) return;
+    if (_completadoExitosamente || _mostrandoDemostracion) return;
     _encenderMotorTractor();
 
     if (!_cronometro.isRunning) {
@@ -201,9 +260,9 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
       _trazoActual.add(puntoActual);
       _evaluarPrecisionMuestraContinua(puntoActual);
 
-      if (_trazoActual.length % 3 == 0) {
-        _huertoRabanos.add(
-          RabanoAnimado(
+      if (_trazoActual.length % 5 == 0) {
+        _huertoElotes.add(
+          EloteAnimado(
             posicion: puntoActual,
             rotacion: (math.Random().nextDouble() * 0.4) - 0.2,
             escalaObjetivo: 1.1,
@@ -222,29 +281,33 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
     const double maxCanalSombreado = 32.0; 
     double menorDistanciaALineaCentro = double.infinity;
 
-    for (var p in _puntosReferenciaVertical) {
-      double d = (posicionTractor - p).distance;
-      if (d < menorDistanciaALineaCentro) menorDistanciaALineaCentro = d;
-    }
-    for (var p in _puntosReferenciaSuperior) {
-      double d = (posicionTractor - p).distance;
-      if (d < menorDistanciaALineaCentro) menorDistanciaALineaCentro = d;
-    }
-    for (var p in _puntosReferenciaMedio) {
-      double d = (posicionTractor - p).distance;
-      if (d < menorDistanciaALineaCentro) menorDistanciaALineaCentro = d;
-    }
-    for (var p in _puntosReferenciaInferior) {
-      double d = (posicionTractor - p).distance;
-      if (d < menorDistanciaALineaCentro) menorDistanciaALineaCentro = d;
+    if (_faseTrazoActual == 0) {
+      for (var p in _puntosReferenciaVertical) {
+        double d = (posicionTractor - p).distance;
+        if (d < menorDistanciaALineaCentro) menorDistanciaALineaCentro = d;
+      }
+    } else if (_faseTrazoActual == 1) {
+      for (var p in _puntosReferenciaSuperior) {
+        double d = (posicionTractor - p).distance;
+        if (d < menorDistanciaALineaCentro) menorDistanciaALineaCentro = d;
+      }
+    } else if (_faseTrazoActual == 2) {
+      for (var p in _puntosReferenciaMedio) {
+        double d = (posicionTractor - p).distance;
+        if (d < menorDistanciaALineaCentro) menorDistanciaALineaCentro = d;
+      }
+    } else if (_faseTrazoActual == 3) {
+      for (var p in _puntosReferenciaInferior) {
+        double d = (posicionTractor - p).distance;
+        if (d < menorDistanciaALineaCentro) menorDistanciaALineaCentro = d;
+      }
     }
 
     double precisionMuestra = 0.0;
-    // Adaptado estricto a 10 píxeles máximos de precisión como me indicaste
-    if (menorDistanciaALineaCentro <= 10.0) {
+    if (menorDistanciaALineaCentro <= 14.0) {
       precisionMuestra = 100.0; 
     } else if (menorDistanciaALineaCentro <= maxCanalSombreado) {
-      precisionMuestra = 100.0 * (1.0 - ((menorDistanciaALineaCentro - 10.0) / (maxCanalSombreado - 10.0)));
+      precisionMuestra = 100.0 * (1.0 - ((menorDistanciaALineaCentro - 14.0) / (maxCanalSombreado - 14.0)));
     } else {
       precisionMuestra = 0.0; 
     }
@@ -290,10 +353,10 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
       }
     }
 
-    double calculoRaw = _totalMuestrasTomadas > 0 ? (_sumaPrecisionMuestras / _totalMuestrasTomadas) : 0.0;
     setState(() {
-      // Validamos y capamos estrictamente para que NUNCA pueda salir más del 100%
-      _porcentajePrecision = calculoRaw > 100.0 ? 100.0 : calculoRaw;
+      _porcentajePrecision = _totalMuestrasTomadas > 0 
+          ? (_sumaPrecisionMuestras / _totalMuestrasTomadas) 
+          : 0.0;
     });
   }
 
@@ -305,26 +368,12 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
         _trazoActual.clear();
         _estaTocandoTractor = false;
       });
-      if (!_completadoExitosamente && _porcentajePrecision < 15) {
+      if (!_completadoExitosamente && _porcentajePrecision < 15
+      
+      
+      ) {
         _intentosFallidos++;
       }
-    }
-  }
-
-  void _reproducirEfectoEstrellas(int estrellasTotales) async {
-    try {
-      await _audioPlayerEfectos.play(AssetSource('sounds/bien.mp3'));
-    } catch (e) {
-      debugPrint('Error de sonido: $e');
-    }
-    
-    _estrellasVisiblesAnimacion = 0;
-    for (int i = 1; i <= estrellasTotales; i++) {
-      await Future.delayed(const Duration(milliseconds: 250));
-      if (!mounted) return;
-      setState(() {
-        _estrellasVisiblesAnimacion = i;
-      });
     }
   }
 
@@ -334,118 +383,102 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
       _completadoExitosamente = true;
     });
 
-    int starsEarned = 1;
+    int estrellasGanadas = 1;
     if (_porcentajePrecision >= 90) {
-      starsEarned = 5; 
+      estrellasGanadas = 5; 
     } else if (_porcentajePrecision >= 75) {
-      starsEarned = 4;
+      estrellasGanadas = 4;
     } else if (_porcentajePrecision >= 55) {
-      starsEarned = 3;
+      estrellasGanadas = 3;
     } else if (_porcentajePrecision >= 30) {
-      starsEarned = 2;
+      estrellasGanadas = 2;
     }
 
-    _reproducirEfectoEstrellas(starsEarned);
     _voiceService.hablar('E, que se pronuncia "eee"');
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-            backgroundColor: Colors.white,
-            title: const Text(
-              'Resultado del Trazo', 
-              style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF134074)),
-              textAlign: TextAlign.center
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        title: const Text(
+          'Resultado del Trazo', 
+          style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF134074)),
+          textAlign: TextAlign.center
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${_porcentajePrecision.toStringAsFixed(0)}% de Precisión', 
+              style: TextStyle(
+                fontSize: 22, 
+                fontWeight: FontWeight.bold, 
+                color: _porcentajePrecision >= 75 ? Colors.green : Colors.orange
+              )
             ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '${_porcentajePrecision.toStringAsFixed(0)}% de Precisión', 
-                  style: TextStyle(
-                    fontSize: 22, 
-                    fontWeight: FontWeight.bold, 
-                    color: _porcentajePrecision >= 75 ? Colors.green : Colors.orange
-                  )
+            const SizedBox(height: 16),
+            SecuencialEstrellasWidget(cantidadEstrellas: estrellasGanadas),
+            const SizedBox(height: 16),
+            Text('Tiempo empleado: ${_cronometro.elapsed.inSeconds}s', style: const TextStyle(color: Colors.grey)),
+          ],
+        ),
+        actionsPadding: const EdgeInsets.only(bottom: 24, left: 16, right: 16),
+        actions: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              IconButton(
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.red[400],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.all(14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
-                const SizedBox(height: 16),
-                // Animación secuencial idéntica a tus pantallas previas
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(5, (index) {
-                    return Icon(
-                      Icons.star,
-                      size: 40,
-                      color: index < _estrellasVisiblesAnimacion ? Colors.amber : Colors.grey[300],
-                    );
-                  }),
+                onPressed: () {
+                  Navigator.pop(context);
+                  _reiniciarTodo();
+                },
+                icon: const Icon(Icons.replay, size: 28),
+              ),
+
+              IconButton(
+                style: IconButton.styleFrom(
+                  backgroundColor: const Color(0xFFb388ff),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.all(14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
-                const SizedBox(height: 16),
-                Text('Tiempo empleado: ${_cronometro.elapsed.inSeconds}s', style: const TextStyle(color: Colors.grey)),
-              ],
-            ),
-            actionsPadding: const EdgeInsets.only(bottom: 24, left: 16, right: 16),
-            actions: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  IconButton(
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.red[400],
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.all(14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _reiniciarTodo();
-                    },
-                    icon: const Icon(Icons.replay, size: 28),
-                  ),
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const HLibro1()),
+                  );
+                },
+                icon: const Icon(Icons.home, size: 28),
+              ),
 
-                  IconButton(
-                    style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xFFb388ff),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.all(14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    onPressed: () {
-                      Navigator.pop(context);
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => const HLibro1()),
-                      );
-                    },
-                    icon: const Icon(Icons.home, size: 28),
-                  ),
-
-                  IconButton(
-                    style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xFF4caf50),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.all(14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    onPressed: () {
-                      Navigator.pop(context);
-                      // Te manda exactamente a travoemi.dart tal cual solicitaste
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => const TrazoEMinusculaScreen()),
-                      );
-                    },
-                    icon: const Icon(Icons.arrow_forward, size: 28),
-                  ),
-                ],
+              IconButton(
+                style: IconButton.styleFrom(
+                  backgroundColor: const Color(0xFF4caf50),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.all(14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const TrazoAMinusculaScreen()),
+                  );
+                },
+                icon: const Icon(Icons.arrow_forward, size: 28),
               ),
             ],
-          );
-        }
+          ),
+        ],
       ),
     );
   }
@@ -454,7 +487,7 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
     setState(() {
       _trazos.clear();
       _trazoActual.clear();
-      _huertoRabanos.clear();
+      _huertoElotes.clear();
       _completadoExitosamente = false;
       _intentosFallidos = 0;
       _cronometro.reset();
@@ -468,7 +501,7 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         backgroundColor: const Color(0xFF134074),
-        title: const Text('Letra E', style: TextStyle(color: Colors.white)),
+        title: const Text('SABIA - Letra E', style: TextStyle(color: Colors.white)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white), 
           onPressed: () => Navigator.pop(context),
@@ -488,6 +521,37 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
                   ],
                 ),
               ),
+              
+              GestureDetector(
+                onTap: _pronunciarLetraE,
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF99d98c),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      )
+                    ],
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'E',
+                      style: TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF134074),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
 
               Expanded(
                 child: Center(
@@ -521,7 +585,7 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
                                   painter: MontessoriPainter(
                                     trazos: _trazos,
                                     trazoActual: _trazoActual,
-                                    huerto: _huertoRabanos,
+                                    huerto: _huertoElotes,
                                     refVertical: _puntosReferenciaVertical,
                                     refSuperior: _puntosReferenciaSuperior,
                                     refMedio: _puntosReferenciaMedio,
@@ -532,16 +596,18 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
                                     cubiertosInferior: _cubiertosInferior,
                                     faseActual: _faseTrazoActual,
                                     factorParpadeo: _semillasBlinkController.value,
+                                    trazosDemostracion: _trazoDemostracion,
+                                    mostrandoDemostracion: _mostrandoDemostracion,
                                   ),
                                   size: Size.infinite,
                                 );
                               },
                             ),
 
-                            if (_posicionTractor != null)
+                            if (_posicionTractor != null && !_mostrandoDemostracion)
                               Positioned(
-                                left: _posicionTractor!.dx - 28,
-                                top: _posicionTractor!.dy - 28,
+                                left: _posicionTractor!.dx - 24,
+                                top: _posicionTractor!.dy - 24,
                                 child: Transform.rotate(
                                   angle: _anguloTractor,
                                   child: AnimatedScale(
@@ -554,8 +620,8 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
                                         shape: BoxShape.circle,
                                         boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)], 
                                       ),
-                                      padding: const EdgeInsets.all(6),
-                                      child: const Icon(Icons.agriculture, size: 38, color: Colors.white),
+                                      padding: const EdgeInsets.all(4),
+                                      child: const Icon(Icons.agriculture, size: 36, color: Colors.white),
                                     ),
                                   ),
                                 ),
@@ -575,9 +641,24 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
                   children: [
                     IconButton(
                       style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xFFFFD54F),
+                        foregroundColor: const Color(0xFF134074),
+                        padding: const EdgeInsets.all(14),
+                        fixedSize: const Size(56, 56),
+                      ),
+                      onPressed: _mostrandoDemostracion ? null : _iniciarDemostracion,
+                      icon: Icon(
+                        _mostrandoDemostracion ? Icons.hourglass_empty : Icons.play_arrow,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    IconButton(
+                      style: IconButton.styleFrom(
                         backgroundColor: Colors.red[400], 
                         foregroundColor: Colors.white, 
-                        padding: const EdgeInsets.all(14)
+                        padding: const EdgeInsets.all(14),
+                        fixedSize: const Size(56, 56),
                       ),
                       onPressed: _reiniciarTodo,
                       icon: const Icon(Icons.delete_sweep, size: 28),
@@ -587,7 +668,8 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
                       style: IconButton.styleFrom(
                         backgroundColor: Colors.blue[600], 
                         foregroundColor: Colors.white, 
-                        padding: const EdgeInsets.all(14)
+                        padding: const EdgeInsets.all(14),
+                        fixedSize: const Size(56, 56),
                       ),
                       onPressed: _ejecutarCalificacionYVentana,
                       icon: const Icon(Icons.fact_check, size: 28),
@@ -630,7 +712,7 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
 class MontessoriPainter extends CustomPainter {
   final List<List<Offset>> trazos;
   final List<Offset> trazoActual;
-  final List<RabanoAnimado> huerto;
+  final List<EloteAnimado> huerto;
   
   final List<Offset> refVertical;
   final List<Offset> refSuperior;
@@ -644,6 +726,8 @@ class MontessoriPainter extends CustomPainter {
   
   final int faseActual;
   final double factorParpadeo;
+  final List<Offset> trazosDemostracion;
+  final bool mostrandoDemostracion;
 
   MontessoriPainter({
     required this.trazos,
@@ -659,6 +743,8 @@ class MontessoriPainter extends CustomPainter {
     required this.cubiertosInferior,
     required this.faseActual,
     required this.factorParpadeo,
+    required this.trazosDemostracion,
+    required this.mostrandoDemostracion,
   });
 
   @override
@@ -696,71 +782,155 @@ class MontessoriPainter extends CustomPainter {
     canvas.drawPath(pathE, shadowPaint);
     canvas.drawPath(pathE, letterPaint);
 
-    final paintTierra = Paint()
-      ..color = const Color(0xFF4a3319)
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..strokeWidth = 44.0;
+    if (!mostrandoDemostracion) {
+      final paintTierra = Paint()
+        ..color = const Color(0xFF4a3319)
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..strokeWidth = 44.0;
 
-    for (var trazo in trazos) {
-      if (trazo.length > 1) {
-        final path = Path()..moveTo(trazo.first.dx, trazo.first.dy);
-        for (int i = 1; i < trazo.length; i++) {
-          path.lineTo(trazo[i].dx, trazo[i].dy);
+      for (var trazo in trazos) {
+        if (trazo.length > 1) {
+          final path = Path()..moveTo(trazo.first.dx, trazo.first.dy);
+          for (int i = 1; i < trazo.length; i++) {
+            path.lineTo(trazo[i].dx, trazo[i].dy);
+          }
+          canvas.drawPath(path, paintTierra);
         }
-        canvas.drawPath(path, paintTierra);
+      }
+
+      if (trazoActual.length > 1) {
+        final pathActual = Path()..moveTo(trazoActual.first.dx, trazoActual.first.dy);
+        for (int i = 1; i < trazoActual.length; i++) {
+          pathActual.lineTo(trazoActual[i].dx, trazoActual[i].dy);
+        }
+        canvas.drawPath(pathActual, paintTierra);
+      }
+
+      final paintSemilla = Paint()
+        ..color = const Color(0xFFFFEE58).withOpacity(0.4 + (factorParpadeo * 0.6))
+        ..style = PaintingStyle.fill;
+
+      if (faseActual == 0) {
+        for (int i = 0; i < refVertical.length; i++) {
+          if (!cubiertosVertical[i]) canvas.drawCircle(refVertical[i], 5.0 + (factorParpadeo * 3), paintSemilla);
+        }
+      } else if (faseActual == 1) {
+        for (int i = 0; i < refSuperior.length; i++) {
+          if (!cubiertosSuperior[i]) canvas.drawCircle(refSuperior[i], 5.0 + (factorParpadeo * 3), paintSemilla);
+        }
+      } else if (faseActual == 2) {
+        for (int i = 0; i < refMedio.length; i++) {
+          if (!cubiertosMedio[i]) canvas.drawCircle(refMedio[i], 5.0 + (factorParpadeo * 3), paintSemilla);
+        }
+      } else if (faseActual == 3) {
+        for (int i = 0; i < refInferior.length; i++) {
+          if (!cubiertosInferior[i]) canvas.drawCircle(refInferior[i], 5.0 + (factorParpadeo * 3), paintSemilla);
+        }
       }
     }
 
-    if (trazoActual.length > 1) {
-      final pathActual = Path()..moveTo(trazoActual.first.dx, trazoActual.first.dy);
-      for (int i = 1; i < trazoActual.length; i++) {
-        pathActual.lineTo(trazoActual[i].dx, trazoActual[i].dy);
+    if (mostrandoDemostracion && trazosDemostracion.length > 1) {
+      final paintDemostracion = Paint()
+        ..color = const Color(0xFF55a644).withOpacity(0.8)
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..strokeWidth = 40.0;
+
+      final pathDemostracion = Path()
+        ..moveTo(trazosDemostracion.first.dx, trazosDemostracion.first.dy);
+      for (int i = 1; i < trazosDemostracion.length; i++) {
+        pathDemostracion.lineTo(trazosDemostracion[i].dx, trazosDemostracion[i].dy);
       }
-      canvas.drawPath(pathActual, paintTierra);
+      canvas.drawPath(pathDemostracion, paintDemostracion);
     }
 
-    final paintSemilla = Paint()
-      ..color = const Color(0xFFFFEE58).withOpacity(0.4 + (factorParpadeo * 0.6))
-      ..style = PaintingStyle.fill;
+    if (!mostrandoDemostracion) {
+      for (var elote in huerto) {
+        if (elote.escalaActual > 0.05) {
+          canvas.save();
+          canvas.translate(elote.posicion.dx, elote.posicion.dy);
+          canvas.rotate(elote.rotacion);
+          canvas.scale(elote.escalaActual);
 
-    if (faseActual == 0) {
-      for (int i = 0; i < refVertical.length; i++) {
-        if (!cubiertosVertical[i]) canvas.drawCircle(refVertical[i], 5.0 + (factorParpadeo * 3), paintSemilla);
-      }
-    } else if (faseActual == 1) {
-      for (int i = 0; i < refSuperior.length; i++) {
-        if (!cubiertosSuperior[i]) canvas.drawCircle(refSuperior[i], 5.0 + (factorParpadeo * 3), paintSemilla);
-      }
-    } else if (faseActual == 2) {
-      for (int i = 0; i < refMedio.length; i++) {
-        if (!cubiertosMedio[i]) canvas.drawCircle(refMedio[i], 5.0 + (factorParpadeo * 3), paintSemilla);
-      }
-    } else if (faseActual == 3) {
-      for (int i = 0; i < refInferior.length; i++) {
-        if (!cubiertosInferior[i]) canvas.drawCircle(refInferior[i], 5.0 + (factorParpadeo * 3), paintSemilla);
-      }
-    }
+          final textPainter = TextPainter(
+            text: const TextSpan(text: '🌽', style: TextStyle(fontSize: 32)),
+            textDirection: TextDirection.ltr,
+          )..layout();
 
-    for (var rabano in huerto) {
-      if (rabano.escalaActual > 0.05) {
-        canvas.save();
-        canvas.translate(rabano.posicion.dx, rabano.posicion.dy);
-        canvas.rotate(rabano.rotacion);
-        canvas.scale(rabano.escalaActual);
-
-        final textPainter = TextPainter(
-          text: const TextSpan(text: '🫚', style: TextStyle(fontSize: 24)),
-          textDirection: TextDirection.ltr,
-        )..layout();
-
-        textPainter.paint(canvas, Offset(-textPainter.width / 2, -textPainter.height / 2));
-        canvas.restore();
+          textPainter.paint(canvas, Offset(-textPainter.width / 2, -textPainter.height / 2));
+          canvas.restore();
+        }
       }
     }
   }
 
   @override
   bool shouldRepaint(covariant MontessoriPainter oldDelegate) => true;
+}
+
+class SecuencialEstrellasWidget extends StatefulWidget {
+  final int cantidadEstrellas;
+  const SecuencialEstrellasWidget({super.key, required this.cantidadEstrellas});
+
+  @override
+  State<SecuencialEstrellasWidget> createState() => _SecuencialEstrellasWidgetState();
+}
+
+class _SecuencialEstrellasWidgetState extends State<SecuencialEstrellasWidget> {
+  final List<double> _escalasEstrellas = [0.0, 0.0, 0.0, 0.0, 0.0];
+  final AudioPlayer _audioPlayerEfecto = AudioPlayer();
+
+  @override
+  void initState() {
+    super.initState();
+    _reproducirEstrellasConRetraso();
+  }
+
+  @override
+  void dispose() {
+    _audioPlayerEfecto.dispose();
+    super.dispose();
+  }
+
+  void _reproducirEstrellasConRetraso() async {
+    for (int i = 0; i < 5; i++) {
+      await Future.delayed(const Duration(milliseconds: 400));
+      if (!mounted) return;
+      
+      setState(() {
+        _escalasEstrellas[i] = 1.0;
+      });
+
+      if (i < widget.cantidadEstrellas) {
+        try {
+          await _audioPlayerEfecto.play(AssetSource('sounds/bien.mp3'), mode: PlayerMode.lowLatency);
+        } catch (e) {
+          debugPrint('Error reproduciendo sonido bien.mp3: $e');
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(5, (index) {
+        bool esGanada = index < widget.cantidadEstrellas;
+        return AnimatedScale(
+          scale: _escalasEstrellas[index],
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.bounceOut, 
+          child: Icon(
+            Icons.star,
+            color: esGanada ? Colors.amber : Colors.grey[300],
+            size: 44,
+          ),
+        );
+      }),
+    );
+  }
 }
