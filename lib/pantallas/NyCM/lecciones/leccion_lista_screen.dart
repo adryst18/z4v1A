@@ -8,6 +8,7 @@ import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_5_screen.dart';
 import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_6_screen.dart';
 import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_7_screen.dart';
 import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_8_screen.dart';
+import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_9_screen.dart';
 
 /// ============================================================
 /// LISTA DE LECCIONES — NyCM
@@ -134,7 +135,11 @@ class _LeccionListaScreenState extends State<LeccionListaScreen> {
           titulo: 'Ordena las palabras',
           pantalla: const Leccion17_8Screen(),
         ),
-        const _ParteLeccion(numero: 9, titulo: 'Próximamente'),
+        _ParteLeccion(
+          numero: 9,
+          titulo: 'Completa los enunciados',
+          pantalla: const Leccion17_9Screen(),
+        ),
       ],
     ),
   ];
