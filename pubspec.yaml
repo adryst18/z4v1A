@@ -84,6 +84,11 @@ flutter:
     - assets/imagenes/portada2.jpg
     - assets/imagenes/portada3.png
     - assets/imagenes/portada4.jpg
+    - assets/imagenes/papa.png
+    - assets/imagenes/pelota.png
+    - assets/imagenes/pila.png
+    - assets/imagenes/popote.png
+    - assets/imagenes/puerta.png
     - assets/imagenes/vocales/ama.png
     - assets/imagenes/vocales/ami.png
     - assets/imagenes/vocales/ema.png

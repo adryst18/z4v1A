@@ -5,6 +5,10 @@ import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_2_silabas_pa_pe_pi_po_
 import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_3_ilumina_silabas.dart';
 import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_4_nombra_imagenes.dart';
 import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_5_screen.dart';
+import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_6_screen.dart';
+import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_7_screen.dart';
+import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_8_screen.dart';
+import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_9_screen.dart';
 
 /// ============================================================
 /// LISTA DE LECCIONES — NyCM
@@ -116,10 +120,26 @@ class _LeccionListaScreenState extends State<LeccionListaScreen> {
           titulo: 'Palmeo de sílabas y abecedario móvil',
           pantalla: const Leccion17_5Screen(),
         ),
-        const _ParteLeccion(numero: 6, titulo: 'Próximamente'),
-        const _ParteLeccion(numero: 7, titulo: 'Próximamente'),
-        const _ParteLeccion(numero: 8, titulo: 'Próximamente'),
-        const _ParteLeccion(numero: 9, titulo: 'Próximamente'),
+        _ParteLeccion(
+          numero: 6,
+          titulo: 'Une la imagen con la palabra',
+          pantalla: const Leccion17_6Screen(),
+        ),
+        _ParteLeccion(
+          numero: 7,
+          titulo: 'Copia los enunciados',
+          pantalla: const Leccion17_7Screen(),
+        ),
+        _ParteLeccion(
+          numero: 8,
+          titulo: 'Ordena las palabras',
+          pantalla: const Leccion17_8Screen(),
+        ),
+        _ParteLeccion(
+          numero: 9,
+          titulo: 'Completa los enunciados',
+          pantalla: const Leccion17_9Screen(),
+        ),
       ],
     ),
   ];
