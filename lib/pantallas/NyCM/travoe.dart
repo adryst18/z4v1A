@@ -6,7 +6,7 @@ import 'package:sabia/services/voice_service.dart';
 import 'package:sabia/services/log_service.dart';
 import 'package:sabia/models/log_entry.dart';
 import 'package:sabia/pantallas/NyCM/hlilbro1.dart';
-
+import 'package:sabia/pantallas/NyCM/travoemi.dart';
 import 'package:sabia/pantallas/NyCM/travoami.dart';
 
 class EloteAnimado {
@@ -368,10 +368,7 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
         _trazoActual.clear();
         _estaTocandoTractor = false;
       });
-      if (!_completadoExitosamente && _porcentajePrecision < 15
-      
-      
-      ) {
+      if (!_completadoExitosamente && _porcentajePrecision < 15) {
         _intentosFallidos++;
       }
     }
@@ -452,7 +449,7 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
                 ),
                 onPressed: () {
                   Navigator.pop(context);
-                  Navigator.push(
+                  Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(builder: (context) => const HLibro1()),
                   );
@@ -471,7 +468,7 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const TrazoAMinusculaScreen()),
+                    MaterialPageRoute(builder: (context) => const TrazoEMinusculaScreen()),
                   );
                 },
                 icon: const Icon(Icons.arrow_forward, size: 28),
@@ -504,7 +501,13 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
         title: const Text('SABIA - Letra E', style: TextStyle(color: Colors.white)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white), 
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            // CORRECCIÓN: Navega directamente al menú principal (hlilbro1.dart)
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HLibro1()),
+            );
+          },
         ),
       ),
       body: Stack(

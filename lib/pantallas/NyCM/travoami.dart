@@ -1,48 +1,59 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:audioplayers/audioplayers.dart'; 
 import 'package:sabia/services/voice_service.dart';
 import 'package:sabia/services/log_service.dart';
 import 'package:sabia/models/log_entry.dart';
-import 'package:sabia/pantallas/NyCM/hlilbro1.dart';
+import 'package:sabia/pantallas/NyCM/hlilbro1.dart'; 
+import 'travoami.dart';
+import 'travoe.dart';
 
-import 'package:sabia/pantallas/NyCM/travoami.dart' show TrazoAMinusculaScreen;
-
-class EloteAnimado {
+/// Clase que representa una abeja animada que aparece cuando el usuario traza
+class AbejaAnimada {
   final Offset posicion;
   final double rotacion;
   final double escalaObjetivo;
   double escalaActual = 0.0;
 
-  EloteAnimado({
+  AbejaAnimada({
     required this.posicion,
     required this.rotacion,
     required this.escalaObjetivo,
   });
 }
 
-class TrazoEScreen extends StatefulWidget {
-  const TrazoEScreen({super.key});
+/// Pantalla principal para trazar la letra a minúscula
+class TrazoAMinusculaScreen extends StatefulWidget {
+  const TrazoAMinusculaScreen({super.key});
 
   @override
-  State<TrazoEScreen> createState() => _TrazoEScreenState();
+  State<TrazoAMinusculaScreen> createState() => _TrazoAMinusculaScreenState();
 }
 
-class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMixin {
+class _TrazoAMinusculaScreenState extends State<TrazoAMinusculaScreen> with TickerProviderStateMixin {
+  // ========================================
+  // SERVICIOS Y REPRODUCTORES DE AUDIO
+  // ========================================
   final VoiceService _voiceService = VoiceService();
   final LogService _logService = LogService();
-  final AudioPlayer _audioPlayerTractor = AudioPlayer();
+  final AudioPlayer _audioPlayerAbejas = AudioPlayer();
   final AudioPlayer _audioPlayerLapiz = AudioPlayer();
   
-  List<List<Offset>> _trazos = [];
-  List<Offset> _trazoActual = [];
-  List<EloteAnimado> _huertoElotes = [];
+  // ========================================
+  // ESTADO DEL TRAZO
+  // ========================================
+  List<List<Offset>> _trazos = [];           // Lista de todos los trazos completados
+  List<Offset> _trazoActual = [];            // Trazo que se está dibujando actualmente
+  List<AbejaAnimada> _abejasHuerto = [];     // Abejas que aparecen al trazar
   
-  Offset? _posicionTractor;
-  double _anguloTractor = 0.0;
-  bool _estaTocandoTractor = false;
+  Offset? _posicionPanal;                    // Posición actual del cursor (panal)
+  double _anguloPanal = 0.0;                 // Ángulo de rotación del panal
+  bool _estaTocando = false;                 // Si el usuario está tocando la pantalla
 
+  // ========================================
+  // MÉTRICAS Y ESTADÍSTICAS
+  // ========================================
   final Stopwatch _cronometro = Stopwatch();
   int _intentosFallidos = 0;
   bool _completadoExitosamente = false;
@@ -51,22 +62,27 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
   double _sumaPrecisionMuestras = 0.0;
   int _totalMuestrasTomadas = 0;
 
-  late AnimationController _semillasBlinkController;
-  late AnimationController _loopElotesController;
-  late AnimationController _demostracionController;
+  // ========================================
+  // CONTROLADORES DE ANIMACIÓN
+  // ========================================
+  late AnimationController _semillasBlinkController;    // Parpadeo de semillas
+  late AnimationController _loopAbejasController;       // Animación de abejas
+  late AnimationController _confetiController;          // Confeti al ganar
+  late AnimationController _demostracionController;     // Animación de demostración
   
-  int _faseTrazoActual = 0;
+  // ========================================
+  // FASES DEL TRAZO (2 fases para 'a': Círculo y Tallo)
+  // ========================================
+  int _faseTrazoActual = 0;                            // 0=Círculo, 1=Tallo
+  List<Offset> _puntosReferenciaCirculo = [];
+  List<Offset> _puntosReferenciaTallo = [];
   
-  List<Offset> _puntosReferenciaVertical = [];
-  List<Offset> _puntosReferenciaSuperior = [];
-  List<Offset> _puntosReferenciaMedio = [];
-  List<Offset> _puntosReferenciaInferior = [];
+  List<bool> _cubiertosCirculo = [];                 
+  List<bool> _cubiertosTallo = [];
   
-  List<bool> _cubiertosVertical = [];
-  List<bool> _cubiertosSuperior = [];
-  List<bool> _cubiertosMedio = [];
-  List<bool> _cubiertosInferior = [];
-
+  // ========================================
+  // ESTADO DE DEMOSTRACIÓN
+  // ========================================
   bool _mostrandoDemostracion = false;
   List<Offset> _trazoDemostracion = [];
 
@@ -76,98 +92,102 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
     _voiceService.init();
     _generarPuntosReferenciaPorPartes();
     
+    // Controlador para parpadeo de semillas (700ms, reversa)
     _semillasBlinkController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 700),
     )..repeat(reverse: true);
 
-    _loopElotesController = AnimationController(
+    // Controlador para animación fluida de abejas (16fps)
+    _loopAbejasController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 16),
     )..addListener(() {
         setState(() {
-          for (var elote in _huertoElotes) {
-            if (elote.escalaActual < elote.escalaObjetivo) {
-              elote.escalaActual += 0.08;
-              if (elote.escalaActual > elote.escalaObjetivo) {
-                elote.escalaActual = elote.escalaObjetivo;
+          for (var abeja in _abejasHuerto) {
+            if (abeja.escalaActual < abeja.escalaObjetivo) {
+              abeja.escalaActual += 0.08;
+              if (abeja.escalaActual > abeja.escalaObjetivo) {
+                abeja.escalaActual = abeja.escalaObjetivo;
               }
             }
           }
         });
       });
-    _loopElotesController.repeat();
+    _loopAbejasController.repeat();
 
+    // Controlador para confeti (2 segundos)
+    _confetiController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    );
+    
+    // Controlador para demostración (2 segundos por trazo)
     _demostracionController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     );
 
-    _voiceService.hablar('Toca la letra E y luego sigue el camino del tractor');
+    _voiceService.hablar('Toca la letra a y luego sigue el camino de miel');
   }
 
   @override
   void dispose() {
     _semillasBlinkController.dispose();
-    _loopElotesController.dispose();
+    _loopAbejasController.dispose();
+    _confetiController.dispose();
     _demostracionController.dispose();
-    _audioPlayerTractor.dispose();
+    _audioPlayerAbejas.dispose();
     _audioPlayerLapiz.dispose();
     _cronometro.stop();
     super.dispose();
   }
 
+  /// Genera los puntos de referencia para la letra a minúscula
   void _generarPuntosReferenciaPorPartes() {
-    final startX = 95.0;
-    final endX = 235.0;
-    final topY = 80.0;
-    final midY = 210.0;
-    final bottomY = 340.0;
+    _puntosReferenciaCirculo.clear();
+    _puntosReferenciaTallo.clear();
+
+    // 1. Círculo de la 'a' (empieza arriba, va a la izquierda, abajo, derecha, arriba)
+    // Esto asegura que no se parezca a una 'q'
+    for (double t = 0; t <= 1; t += 0.02) {
+      double angle = -math.pi / 2 - (t * 2 * math.pi);
+      double x = 165.0 + 80.0 * math.cos(angle);
+      double y = 240.0 + 80.0 * math.sin(angle);
+      _puntosReferenciaCirculo.add(Offset(x, y));
+    }
     
-    _puntosReferenciaVertical.clear();
-    _puntosReferenciaSuperior.clear();
-    _puntosReferenciaMedio.clear();
-    _puntosReferenciaInferior.clear();
-
-    for (double t = 0; t <= 1; t += 0.06) {
-      _puntosReferenciaVertical.add(Offset(startX, topY + (t * (bottomY - topY))));
-    }
-    for (double t = 0.1; t <= 1; t += 0.1) {
-      _puntosReferenciaSuperior.add(Offset(startX + (t * (endX - startX)), topY));
-    }
-    for (double t = 0.1; t <= 0.85; t += 0.1) {
-      _puntosReferenciaMedio.add(Offset(startX + (t * (endX - startX)), midY));
-    }
-    for (double t = 0.1; t <= 1; t += 0.1) {
-      _puntosReferenciaInferior.add(Offset(startX + (t * (endX - startX)), bottomY));
+    // 2. Tallo de la 'a' (baja por el lado derecho) - MÁS CORTO
+    for (double t = 0; t <= 1; t += 0.05) {
+      _puntosReferenciaTallo.add(Offset(245.0, 180.0 + (t * 140.0)));
     }
 
-    _cubiertosVertical = List.filled(_puntosReferenciaVertical.length, false);
-    _cubiertosSuperior = List.filled(_puntosReferenciaSuperior.length, false);
-    _cubiertosMedio = List.filled(_puntosReferenciaMedio.length, false);
-    _cubiertosInferior = List.filled(_puntosReferenciaInferior.length, false);
+    _cubiertosCirculo = List.filled(_puntosReferenciaCirculo.length, false);
+    _cubiertosTallo = List.filled(_puntosReferenciaTallo.length, false);
     
     _faseTrazoActual = 0; 
-    _posicionTractor = Offset(startX, topY);
+    _posicionPanal = const Offset(165.0, 160.0); // Inicia en la parte superior del círculo
     
     _porcentajePrecision = 0.0;
     _sumaPrecisionMuestras = 0.0;
     _totalMuestrasTomadas = 0;
   }
 
-  Future<void> _encenderMotorTractor() async {
+  /// Reproduce sonido de abejas en loop
+  Future<void> _reproducirSonidoAbejas() async {
     try {
-      await _audioPlayerTractor.setReleaseMode(ReleaseMode.loop);
-      await _audioPlayerTractor.play(AssetSource('sounds/tractor.mp3'));
+      await _audioPlayerAbejas.setReleaseMode(ReleaseMode.loop);
+      await _audioPlayerAbejas.play(AssetSource('sounds/abeja.mp3'));
     } catch (e) {
-      debugPrint('Error cargando audio del tractor: $e');
+      debugPrint('Error cargando audio de abejas: $e');
     }
   }
 
-  Future<void> _apagarMotorTractor() async {
-    await _audioPlayerTractor.stop();
+  Future<void> _detenerSonidoAbejas() async {
+    await _audioPlayerAbejas.stop();
   }
 
+  /// Reproduce sonido de lápiz en loop (para demostración)
   Future<void> _reproducirSonidoLapiz() async {
     try {
       await _audioPlayerLapiz.setReleaseMode(ReleaseMode.loop);
@@ -181,10 +201,12 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
     await _audioPlayerLapiz.stop();
   }
 
-  void _pronunciarLetraE() {
-    _voiceService.hablar('E');
+  /// Pronuncia la letra a
+  void _pronunciarLetraA() {
+    _voiceService.hablar('a');
   }
 
+  /// Inicia la demostración automática del trazo
   Future<void> _iniciarDemostracion() async {
     setState(() {
       _mostrandoDemostracion = true;
@@ -193,16 +215,10 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
     
     await _reproducirSonidoLapiz();
     
-    await _demostrarTrazo(_puntosReferenciaVertical, 0);
+    await _demostrarTrazo(_puntosReferenciaCirculo, 0);
     await Future.delayed(const Duration(milliseconds: 300));
     
-    await _demostrarTrazo(_puntosReferenciaSuperior, 1);
-    await Future.delayed(const Duration(milliseconds: 300));
-    
-    await _demostrarTrazo(_puntosReferenciaMedio, 2);
-    await Future.delayed(const Duration(milliseconds: 300));
-    
-    await _demostrarTrazo(_puntosReferenciaInferior, 3);
+    await _demostrarTrazo(_puntosReferenciaTallo, 1);
     await Future.delayed(const Duration(milliseconds: 500));
     
     await _detenerSonidoLapiz();
@@ -215,6 +231,7 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
     _voiceService.hablar('Ahora te toca a ti');
   }
 
+  /// Demuestra el trazo de una fase específica
   Future<void> _demostrarTrazo(List<Offset> puntos, int fase) async {
     _demostracionController.reset();
     _demostracionController.addListener(() {
@@ -230,23 +247,25 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
     _demostracionController.removeListener(() {});
   }
 
+  /// Inicia un nuevo trazo cuando el usuario toca la pantalla
   void _iniciarNuevoTrazo(Offset puntoInicial) {
     if (_completadoExitosamente || _mostrandoDemostracion) return;
-    _encenderMotorTractor();
+    _reproducirSonidoAbejas();
 
     if (!_cronometro.isRunning) {
       _cronometro.start();
     }
 
     setState(() {
-      _estaTocandoTractor = true;
+      _estaTocando = true;
       _trazoActual = [puntoInicial];
-      _posicionTractor = puntoInicial;
+      _posicionPanal = puntoInicial;
     });
   }
 
+  /// Actualiza el trazo mientras el usuario mueve el dedo
   void _actualizarTrazo(Offset puntoActual) {
-    if (!_estaTocandoTractor || _trazoActual.isEmpty) return;
+    if (!_estaTocando || _trazoActual.isEmpty) return;
     
     Offset puntoAnterior = _trazoActual.last;
     double distancia = (puntoActual - puntoAnterior).distance;
@@ -261,8 +280,8 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
       _evaluarPrecisionMuestraContinua(puntoActual);
 
       if (_trazoActual.length % 5 == 0) {
-        _huertoElotes.add(
-          EloteAnimado(
+        _abejasHuerto.add(
+          AbejaAnimada(
             posicion: puntoActual,
             rotacion: (math.Random().nextDouble() * 0.4) - 0.2,
             escalaObjetivo: 1.1,
@@ -271,34 +290,25 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
       }
 
       setState(() {
-        _posicionTractor = puntoActual;
-        _anguloTractor = nuevoAngulo;
+        _posicionPanal = puntoActual;
+        _anguloPanal = nuevoAngulo;
       });
     }
   }
 
-  void _evaluarPrecisionMuestraContinua(Offset posicionTractor) {
+  /// Evalúa la precisión SOLO considerando los puntos de la fase actual
+  void _evaluarPrecisionMuestraContinua(Offset posicionPanal) {
     const double maxCanalSombreado = 32.0; 
     double menorDistanciaALineaCentro = double.infinity;
 
     if (_faseTrazoActual == 0) {
-      for (var p in _puntosReferenciaVertical) {
-        double d = (posicionTractor - p).distance;
+      for (var p in _puntosReferenciaCirculo) {
+        double d = (posicionPanal - p).distance;
         if (d < menorDistanciaALineaCentro) menorDistanciaALineaCentro = d;
       }
     } else if (_faseTrazoActual == 1) {
-      for (var p in _puntosReferenciaSuperior) {
-        double d = (posicionTractor - p).distance;
-        if (d < menorDistanciaALineaCentro) menorDistanciaALineaCentro = d;
-      }
-    } else if (_faseTrazoActual == 2) {
-      for (var p in _puntosReferenciaMedio) {
-        double d = (posicionTractor - p).distance;
-        if (d < menorDistanciaALineaCentro) menorDistanciaALineaCentro = d;
-      }
-    } else if (_faseTrazoActual == 3) {
-      for (var p in _puntosReferenciaInferior) {
-        double d = (posicionTractor - p).distance;
+      for (var p in _puntosReferenciaTallo) {
+        double d = (posicionPanal - p).distance;
         if (d < menorDistanciaALineaCentro) menorDistanciaALineaCentro = d;
       }
     }
@@ -316,39 +326,19 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
     _totalMuestrasTomadas++;
 
     if (_faseTrazoActual == 0) {
-      for (int i = 0; i < _puntosReferenciaVertical.length; i++) {
-        if ((posicionTractor - _puntosReferenciaVertical[i]).distance < maxCanalSombreado) {
-          _cubiertosVertical[i] = true;
+      for (int i = 0; i < _puntosReferenciaCirculo.length; i++) {
+        if ((posicionPanal - _puntosReferenciaCirculo[i]).distance < maxCanalSombreado) {
+          _cubiertosCirculo[i] = true;
         }
       }
-      if (!_cubiertosVertical.contains(false)) {
+      if (!_cubiertosCirculo.contains(false)) {
         setState(() => _faseTrazoActual = 1); 
-        _voiceService.hablar('¡Bien! Ahora la línea de arriba.');
+        _voiceService.hablar('¡Bien! Ahora baja la línea.');
       }
     } else if (_faseTrazoActual == 1) {
-      for (int i = 0; i < _puntosReferenciaSuperior.length; i++) {
-        if ((posicionTractor - _puntosReferenciaSuperior[i]).distance < maxCanalSombreado) {
-          _cubiertosSuperior[i] = true;
-        }
-      }
-      if (!_cubiertosSuperior.contains(false)) {
-        setState(() => _faseTrazoActual = 2); 
-        _voiceService.hablar('Excelente, ahora la línea del medio.');
-      }
-    } else if (_faseTrazoActual == 2) {
-      for (int i = 0; i < _puntosReferenciaMedio.length; i++) {
-        if ((posicionTractor - _puntosReferenciaMedio[i]).distance < maxCanalSombreado) {
-          _cubiertosMedio[i] = true;
-        }
-      }
-      if (!_cubiertosMedio.contains(false)) {
-        setState(() => _faseTrazoActual = 3); 
-        _voiceService.hablar('¡Último paso! Haz la línea de abajo.');
-      }
-    } else if (_faseTrazoActual == 3) {
-      for (int i = 0; i < _puntosReferenciaInferior.length; i++) {
-        if ((posicionTractor - _puntosReferenciaInferior[i]).distance < maxCanalSombreado) {
-          _cubiertosInferior[i] = true;
+      for (int i = 0; i < _puntosReferenciaTallo.length; i++) {
+        if ((posicionPanal - _puntosReferenciaTallo[i]).distance < maxCanalSombreado) {
+          _cubiertosTallo[i] = true;
         }
       }
     }
@@ -360,13 +350,14 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
     });
   }
 
+  /// Finaliza el trazo actual cuando el usuario levanta el dedo
   void _finalizarTrazoActual() {
-    _apagarMotorTractor();
+    _detenerSonidoAbejas();
     if (_trazoActual.isNotEmpty) {
       setState(() {
         _trazos.add(List.from(_trazoActual));
         _trazoActual.clear();
-        _estaTocandoTractor = false;
+        _estaTocando = false;
       });
       if (!_completadoExitosamente && _porcentajePrecision < 15) {
         _intentosFallidos++;
@@ -374,6 +365,7 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
     }
   }
 
+  /// Ejecuta la calificación final y muestra ventana de resultados
   void _ejecutarCalificacionYVentana() {
     _cronometro.stop();
     setState(() {
@@ -391,7 +383,8 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
       estrellasGanadas = 2;
     }
 
-    _voiceService.hablar('E, que se pronuncia "eee"');
+    _confetiController.forward(from: 0.0);
+    _voiceService.hablar('a, que se pronuncia "a"');
 
     showDialog(
       context: context,
@@ -439,7 +432,6 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
                 },
                 icon: const Icon(Icons.replay, size: 28),
               ),
-
               IconButton(
                 style: IconButton.styleFrom(
                   backgroundColor: const Color(0xFFb388ff),
@@ -456,7 +448,6 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
                 },
                 icon: const Icon(Icons.home, size: 28),
               ),
-
               IconButton(
                 style: IconButton.styleFrom(
                   backgroundColor: const Color(0xFF4caf50),
@@ -468,7 +459,7 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const TrazoAMinusculaScreen()),
+                    MaterialPageRoute(builder: (context) => const TrazoEScreen()),
                   );
                 },
                 icon: const Icon(Icons.arrow_forward, size: 28),
@@ -480,11 +471,12 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
     );
   }
 
+  /// Reinicia todo el estado para empezar de nuevo
   void _reiniciarTodo() {
     setState(() {
       _trazos.clear();
       _trazoActual.clear();
-      _huertoElotes.clear();
+      _abejasHuerto.clear();
       _completadoExitosamente = false;
       _intentosFallidos = 0;
       _cronometro.reset();
@@ -498,7 +490,7 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         backgroundColor: const Color(0xFF134074),
-        title: const Text('SABIA - Letra E', style: TextStyle(color: Colors.white)),
+        title: const Text('SABIA - Letra a', style: TextStyle(color: Colors.white)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white), 
           onPressed: () => Navigator.pop(context),
@@ -520,12 +512,12 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
               ),
               
               GestureDetector(
-                onTap: _pronunciarLetraE,
+                onTap: _pronunciarLetraA,
                 child: Container(
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF99d98c),
+                    color: const Color(0xFFFFF59D),
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
@@ -537,7 +529,7 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
                   ),
                   child: const Center(
                     child: Text(
-                      'E',
+                      'a',
                       style: TextStyle(
                         fontSize: 48,
                         fontWeight: FontWeight.bold,
@@ -556,9 +548,9 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
                     width: 330,
                     height: 440,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF99d98c),
+                      color: const Color(0xFFFFF9C4),
                       borderRadius: BorderRadius.circular(32),
-                      border: Border.all(color: const Color(0xFFd8f3dc), width: 6),
+                      border: Border.all(color: const Color(0xFFFFF59D), width: 6),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.15),
@@ -582,15 +574,11 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
                                   painter: MontessoriPainter(
                                     trazos: _trazos,
                                     trazoActual: _trazoActual,
-                                    huerto: _huertoElotes,
-                                    refVertical: _puntosReferenciaVertical,
-                                    refSuperior: _puntosReferenciaSuperior,
-                                    refMedio: _puntosReferenciaMedio,
-                                    refInferior: _puntosReferenciaInferior,
-                                    cubiertosVertical: _cubiertosVertical,
-                                    cubiertosSuperior: _cubiertosSuperior,
-                                    cubiertosMedio: _cubiertosMedio,
-                                    cubiertosInferior: _cubiertosInferior,
+                                    abejasHuerto: _abejasHuerto,
+                                    refCirculo: _puntosReferenciaCirculo,
+                                    refTallo: _puntosReferenciaTallo,
+                                    cubiertosCirculo: _cubiertosCirculo,
+                                    cubiertosTallo: _cubiertosTallo,
                                     faseActual: _faseTrazoActual,
                                     factorParpadeo: _semillasBlinkController.value,
                                     trazosDemostracion: _trazoDemostracion,
@@ -601,24 +589,24 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
                               },
                             ),
 
-                            if (_posicionTractor != null && !_mostrandoDemostracion)
+                            if (_posicionPanal != null && !_mostrandoDemostracion)
                               Positioned(
-                                left: _posicionTractor!.dx - 24,
-                                top: _posicionTractor!.dy - 24,
+                                left: _posicionPanal!.dx - 24,
+                                top: _posicionPanal!.dy - 24,
                                 child: Transform.rotate(
-                                  angle: _anguloTractor,
+                                  angle: _anguloPanal,
                                   child: AnimatedScale(
-                                    scale: _estaTocandoTractor ? 1.3 : 1.0,
+                                    scale: _estaTocando ? 1.3 : 1.0,
                                     duration: const Duration(milliseconds: 120),
                                     curve: Curves.easeOutBack,
                                     child: Container(
                                       decoration: const BoxDecoration(
-                                        color: Color(0xFF1E88E5),
+                                        color: Color(0xFFFFA000),
                                         shape: BoxShape.circle,
                                         boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)], 
                                       ),
                                       padding: const EdgeInsets.all(4),
-                                      child: const Icon(Icons.agriculture, size: 36, color: Colors.white),
+                                      child: const Icon(Icons.hexagon, size: 36, color: Colors.white),
                                     ),
                                   ),
                                 ),
@@ -676,11 +664,25 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
               ),
             ],
           ),
+
+          IgnorePointer(
+            child: AnimatedBuilder(
+              animation: _confetiController,
+              builder: (context, child) {
+                if (!_confetiController.isAnimating) return const SizedBox.shrink();
+                return CustomPaint(
+                  painter: ConfetiPainter(progreso: _confetiController.value),
+                  size: Size.infinite,
+                );
+              },
+            ),
+          )
         ],
       ),
     );
   }
 
+  /// Widget para mostrar estadísticas en vivo
   Widget _buildLiveStatWidget(IconData icon, String title, String value, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -706,168 +708,7 @@ class _TrazoEScreenState extends State<TrazoEScreen> with TickerProviderStateMix
   }
 }
 
-class MontessoriPainter extends CustomPainter {
-  final List<List<Offset>> trazos;
-  final List<Offset> trazoActual;
-  final List<EloteAnimado> huerto;
-  
-  final List<Offset> refVertical;
-  final List<Offset> refSuperior;
-  final List<Offset> refMedio;
-  final List<Offset> refInferior;
-  
-  final List<bool> cubiertosVertical;
-  final List<bool> cubiertosSuperior;
-  final List<bool> cubiertosMedio;
-  final List<bool> cubiertosInferior;
-  
-  final int faseActual;
-  final double factorParpadeo;
-  final List<Offset> trazosDemostracion;
-  final bool mostrandoDemostracion;
-
-  MontessoriPainter({
-    required this.trazos,
-    required this.trazoActual,
-    required this.huerto,
-    required this.refVertical,
-    required this.refSuperior,
-    required this.refMedio,
-    required this.refInferior,
-    required this.cubiertosVertical,
-    required this.cubiertosSuperior,
-    required this.cubiertosMedio,
-    required this.cubiertosInferior,
-    required this.faseActual,
-    required this.factorParpadeo,
-    required this.trazosDemostracion,
-    required this.mostrandoDemostracion,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final shadowPaint = Paint()
-      ..color = const Color(0xFF55a644)
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..strokeWidth = 64.0;
-
-    final letterPaint = Paint()
-      ..color = const Color(0xFFb7e4c7)
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..strokeWidth = 50.0;
-
-    final startX = 95.0;
-    final endX = 235.0;
-    final topY = 80.0;
-    final midY = 210.0;
-    final bottomY = 340.0;
-
-    final pathE = Path()
-      ..moveTo(startX, topY)
-      ..lineTo(startX, bottomY) 
-      ..moveTo(startX, topY)
-      ..lineTo(endX, topY)      
-      ..moveTo(startX, midY)
-      ..lineTo(startX + (endX - startX) * 0.85, midY) 
-      ..moveTo(startX, bottomY)
-      ..lineTo(endX, bottomY);    
-
-    canvas.drawPath(pathE, shadowPaint);
-    canvas.drawPath(pathE, letterPaint);
-
-    if (!mostrandoDemostracion) {
-      final paintTierra = Paint()
-        ..color = const Color(0xFF4a3319)
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round
-        ..strokeWidth = 44.0;
-
-      for (var trazo in trazos) {
-        if (trazo.length > 1) {
-          final path = Path()..moveTo(trazo.first.dx, trazo.first.dy);
-          for (int i = 1; i < trazo.length; i++) {
-            path.lineTo(trazo[i].dx, trazo[i].dy);
-          }
-          canvas.drawPath(path, paintTierra);
-        }
-      }
-
-      if (trazoActual.length > 1) {
-        final pathActual = Path()..moveTo(trazoActual.first.dx, trazoActual.first.dy);
-        for (int i = 1; i < trazoActual.length; i++) {
-          pathActual.lineTo(trazoActual[i].dx, trazoActual[i].dy);
-        }
-        canvas.drawPath(pathActual, paintTierra);
-      }
-
-      final paintSemilla = Paint()
-        ..color = const Color(0xFFFFEE58).withOpacity(0.4 + (factorParpadeo * 0.6))
-        ..style = PaintingStyle.fill;
-
-      if (faseActual == 0) {
-        for (int i = 0; i < refVertical.length; i++) {
-          if (!cubiertosVertical[i]) canvas.drawCircle(refVertical[i], 5.0 + (factorParpadeo * 3), paintSemilla);
-        }
-      } else if (faseActual == 1) {
-        for (int i = 0; i < refSuperior.length; i++) {
-          if (!cubiertosSuperior[i]) canvas.drawCircle(refSuperior[i], 5.0 + (factorParpadeo * 3), paintSemilla);
-        }
-      } else if (faseActual == 2) {
-        for (int i = 0; i < refMedio.length; i++) {
-          if (!cubiertosMedio[i]) canvas.drawCircle(refMedio[i], 5.0 + (factorParpadeo * 3), paintSemilla);
-        }
-      } else if (faseActual == 3) {
-        for (int i = 0; i < refInferior.length; i++) {
-          if (!cubiertosInferior[i]) canvas.drawCircle(refInferior[i], 5.0 + (factorParpadeo * 3), paintSemilla);
-        }
-      }
-    }
-
-    if (mostrandoDemostracion && trazosDemostracion.length > 1) {
-      final paintDemostracion = Paint()
-        ..color = const Color(0xFF55a644).withOpacity(0.8)
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round
-        ..strokeWidth = 40.0;
-
-      final pathDemostracion = Path()
-        ..moveTo(trazosDemostracion.first.dx, trazosDemostracion.first.dy);
-      for (int i = 1; i < trazosDemostracion.length; i++) {
-        pathDemostracion.lineTo(trazosDemostracion[i].dx, trazosDemostracion[i].dy);
-      }
-      canvas.drawPath(pathDemostracion, paintDemostracion);
-    }
-
-    if (!mostrandoDemostracion) {
-      for (var elote in huerto) {
-        if (elote.escalaActual > 0.05) {
-          canvas.save();
-          canvas.translate(elote.posicion.dx, elote.posicion.dy);
-          canvas.rotate(elote.rotacion);
-          canvas.scale(elote.escalaActual);
-
-          final textPainter = TextPainter(
-            text: const TextSpan(text: '🌽', style: TextStyle(fontSize: 32)),
-            textDirection: TextDirection.ltr,
-          )..layout();
-
-          textPainter.paint(canvas, Offset(-textPainter.width / 2, -textPainter.height / 2));
-          canvas.restore();
-        }
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant MontessoriPainter oldDelegate) => true;
-}
-
+/// Widget para mostrar estrellas de calificación secuencialmente
 class SecuencialEstrellasWidget extends StatefulWidget {
   final int cantidadEstrellas;
   const SecuencialEstrellasWidget({super.key, required this.cantidadEstrellas});
@@ -930,4 +771,206 @@ class _SecuencialEstrellasWidgetState extends State<SecuencialEstrellasWidget> {
       }),
     );
   }
+}
+
+/// Painter personalizado para dibujar la letra a y todos los elementos visuales
+class MontessoriPainter extends CustomPainter {
+  final List<List<Offset>> trazos;
+  final List<Offset> trazoActual;
+  final List<AbejaAnimada> abejasHuerto;
+  
+  final List<Offset> refCirculo;
+  final List<Offset> refTallo;
+  
+  final List<bool> cubiertosCirculo;
+  final List<bool> cubiertosTallo;
+  
+  final int faseActual;
+  final double factorParpadeo;
+  final List<Offset> trazosDemostracion;
+  final bool mostrandoDemostracion;
+
+  MontessoriPainter({
+    required this.trazos,
+    required this.trazoActual,
+    required this.abejasHuerto,
+    required this.refCirculo,
+    required this.refTallo,
+    required this.cubiertosCirculo,
+    required this.cubiertosTallo,
+    required this.faseActual,
+    required this.factorParpadeo,
+    required this.trazosDemostracion,
+    required this.mostrandoDemostracion,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Letra a amarilla de fondo (guía)
+    final letterPaint = Paint()
+      ..color = const Color(0xFFFFF59D)
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..strokeWidth = 40.0;
+
+    // Dibujar guía del círculo
+    final pathCirculo = Path();
+    if (refCirculo.isNotEmpty) {
+      pathCirculo.moveTo(refCirculo.first.dx, refCirculo.first.dy);
+      for (int i = 1; i < refCirculo.length; i++) {
+        pathCirculo.lineTo(refCirculo[i].dx, refCirculo[i].dy);
+      }
+    }
+    
+    // Dibujar guía del tallo
+    final pathTallo = Path();
+    if (refTallo.isNotEmpty) {
+      pathTallo.moveTo(refTallo.first.dx, refTallo.first.dy);
+      for (int i = 1; i < refTallo.length; i++) {
+        pathTallo.lineTo(refTallo[i].dx, refTallo[i].dy);
+      }
+    }
+
+    canvas.drawPath(pathCirculo, letterPaint);
+    canvas.drawPath(pathTallo, letterPaint);
+
+    // Durante la demostración, ocultar trazos del usuario, semillas y abejas
+    if (!mostrandoDemostracion) {
+      // Trazos del usuario (Miel base con efecto fluido)
+      final paintMielBase = Paint()
+        ..color = const Color(0xFFD48C22)
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..strokeWidth = 38.0
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.0); 
+
+      final paintMielBrillo = Paint()
+        ..color = const Color(0xFFFFE082)
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..strokeWidth = 14.0;
+
+      final paintMielBorde = Paint()
+        ..color = const Color(0xFF9E5E00)
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..strokeWidth = 42.0
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
+
+      void _dibujarCamino(List<Offset> puntos) {
+        if (puntos.length > 1) {
+          final path = Path()..moveTo(puntos.first.dx, puntos.first.dy);
+          
+          for (int i = 1; i < puntos.length - 1; i++) {
+            final xc = (puntos[i].dx + puntos[i + 1].dx) / 2;
+            final yc = (puntos[i].dy + puntos[i + 1].dy) / 2;
+            path.quadraticBezierTo(puntos[i].dx, puntos[i].dy, xc, yc);
+          }
+          path.lineTo(puntos.last.dx, puntos.last.dy);
+
+          canvas.drawPath(path, paintMielBorde);
+          canvas.drawPath(path, paintMielBase);
+          canvas.drawPath(path, paintMielBrillo);
+        }
+      }
+
+      for (var trazo in trazos) {
+        _dibujarCamino(trazo);
+      }
+
+      _dibujarCamino(trazoActual);
+
+      // Semillas amarillas parpadeantes
+      final paintSemilla = Paint()
+        ..color = const Color.fromARGB(255, 202, 142, 12).withOpacity(0.4 + (factorParpadeo * 0.6))
+        ..style = PaintingStyle.fill;
+
+      if (faseActual == 0) {
+        for (int i = 0; i < refCirculo.length; i++) {
+          if (!cubiertosCirculo[i]) {
+            canvas.drawCircle(refCirculo[i], 5.0 + (factorParpadeo * 3), paintSemilla);
+          }
+        }
+      } else if (faseActual == 1) {
+        for (int i = 0; i < refTallo.length; i++) {
+          if (!cubiertosTallo[i]) {
+            canvas.drawCircle(refTallo[i], 5.0 + (factorParpadeo * 3), paintSemilla);
+          }
+        }
+      }
+    }
+
+    // Trazo de demostración (miel brillante)
+    if (mostrandoDemostracion && trazosDemostracion.length > 1) {
+      final paintDemostracion = Paint()
+        ..color = const Color(0xFFE6B800).withOpacity(0.8)
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..strokeWidth = 36.0;
+
+      final pathDemostracion = Path()
+        ..moveTo(trazosDemostracion.first.dx, trazosDemostracion.first.dy);
+      for (int i = 1; i < trazosDemostracion.length; i++) {
+        pathDemostracion.lineTo(trazosDemostracion[i].dx, trazosDemostracion[i].dy);
+      }
+      canvas.drawPath(pathDemostracion, paintDemostracion);
+    }
+
+    // Abejas del huerto (solo visibles si NO está en demostración)
+    if (!mostrandoDemostracion) {
+      for (var abeja in abejasHuerto) {
+        if (abeja.escalaActual > 0.05) {
+          canvas.save();
+          canvas.translate(abeja.posicion.dx, abeja.posicion.dy);
+          canvas.rotate(abeja.rotacion);
+          canvas.scale(abeja.escalaActual);
+
+          final textPainter = TextPainter(
+            text: const TextSpan(text: '🐝', style: TextStyle(fontSize: 32)),
+            textDirection: TextDirection.ltr,
+          )..layout();
+
+          textPainter.paint(canvas, Offset(-textPainter.width / 2, -textPainter.height / 2));
+          canvas.restore();
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant MontessoriPainter oldDelegate) => true;
+}
+
+/// Painter para el efecto de confeti
+class ConfetiPainter extends CustomPainter {
+  final double progreso;
+  ConfetiPainter({required this.progreso});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final random = math.Random(12345);
+    final paintStar = Paint()..style = PaintingStyle.fill;
+
+    for (int i = 0; i < 30; i++) {
+      double startX = size.width / 2;
+      double startY = size.height / 2;
+      
+      double angulo = random.nextDouble() * 2 * math.pi;
+      double velocidad = 80.0 + random.nextDouble() * 150.0;
+      
+      double currentX = startX + math.cos(angulo) * velocidad * progreso;
+      double currentY = startY + math.sin(angulo) * velocidad * progreso + (progreso * progreso * 60.0); 
+
+      paintStar.color = Colors.primaries[random.nextInt(Colors.primaries.length)].withOpacity(1.0 - progreso);
+      canvas.drawCircle(Offset(currentX, currentY), 6.0 * (1.0 - progreso), paintStar);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant ConfetiPainter oldDelegate) => true;
 }
