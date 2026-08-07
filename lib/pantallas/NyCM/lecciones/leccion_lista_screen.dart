@@ -9,7 +9,16 @@ import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_6_screen.dart';
 import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_7_screen.dart';
 import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_8_screen.dart';
 import 'package:sabia/pantallas/NyCM/lecciones/leccion_17_9_screen.dart';
-
+import 'package:sabia/pantallas/NyCM/lecciones/leccion_letraS_3_pega_silaba.dart';
+import 'package:sabia/pantallas/NyCM/lecciones/leccion_letraS_4_une_silabas.dart';
+import 'package:sabia/pantallas/NyCM/lecciones/leccion_letraS_5_ilumina_silaba.dart';
+import 'package:sabia/pantallas/NyCM/lecciones/leccion_letraS_6_lee_voz_alta.dart';
+import 'package:sabia/pantallas/NyCM/lecciones/leccion_letraS_7_nombra_imagenes.dart';
+import 'package:sabia/pantallas/NyCM/lecciones/leccion_letraS_8_pega_palabra.dart';
+import 'package:sabia/pantallas/NyCM/lecciones/leccion_letraS_9_palmea_marca_silaba.dart';
+import 'package:sabia/pantallas/NyCM/lecciones/leccion_letraS_10_abecedario_movil.dart';
+import 'package:sabia/pantallas/NyCM/lecciones/leccion_letraS_11_une_imagen_palabra.dart';
+import 'package:sabia/pantallas/NyCM/lecciones/leccion_letraS_12_lee_voz_alta_palabras.dart';
 /// ============================================================
 /// LISTA DE LECCIONES — NyCM
 ///
@@ -140,6 +149,64 @@ class _LeccionListaScreenState extends State<LeccionListaScreen> {
           titulo: 'Completa los enunciados',
           pantalla: const Leccion17_9Screen(),
         ),
+      ],
+    ),
+    _LeccionInfo(
+      numero: 'S',
+      titulo: 'Aprendiendo la letra S',
+      descripcion: 'Sílabas con la letra S / actividades en proceso.',
+      color: const Color(0xFF3DBFDA),
+      partes: [
+        _ParteLeccion(
+          numero: 3,
+          titulo: 'Pega debajo la sílaba',
+          pantalla: const LeccionS3PegaSilaba(),
+        ),
+        _ParteLeccion(
+          numero: 4,
+          titulo: 'Une las sílabas',
+          pantalla: const LeccionS4UneSilabas(),
+        ),
+        _ParteLeccion(
+          numero: 5,
+          titulo: 'Ilumina la sílaba',
+          pantalla: const LeccionS5IluminaSilaba(),
+        ),
+        _ParteLeccion(
+          numero: 6,
+          titulo: 'Lee en voz alta',
+          pantalla: const LeccionS6LeeVozAlta(),
+        ),
+        _ParteLeccion(
+            numero: 7,
+            titulo: 'Nombra las imágenes',
+            pantalla: const LeccionS7NombraImagenes(),
+        ),
+        _ParteLeccion(
+        numero: 8,
+        titulo: 'Pega la palabra',
+        pantalla: const LeccionS8PegaPalabra(),
+        ),
+        _ParteLeccion(
+          numero: 9,
+          titulo: 'Palmea y marca sílabas',
+          pantalla: const LeccionS9PalmeaMarca(),
+        ),
+        _ParteLeccion(
+          numero: 10,
+          titulo: 'Abecedario móvil',
+          pantalla: const LeccionS10AbecedarioMovil(),
+        ),
+              _ParteLeccion(
+        numero: 11,
+        titulo: 'Une imagen con palabra',
+        pantalla: const LeccionS11UneImagenPalabra(),
+      ),
+      _ParteLeccion(
+        numero: 12,
+        titulo: 'Lee en voz alta',
+        pantalla: const LeccionS12LeeVozAltaPalabras(),
+      ),
       ],
     ),
   ];
