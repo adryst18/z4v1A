@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:sabia/pantallas/home_screen.dart';
 import 'log2.dart';
 import 'package:sabia/services/log_service.dart';
+import 'package:sabia/services/auth_service.dart';
+import 'package:sabia/services/biometric_service.dart';
 import 'package:sabia/models/log_entry.dart';
 import 'package:sabia/pantallas/privado.dart';
 import 'package:sabia/pantallas/admin/ad1.dart';
@@ -18,15 +20,13 @@ class _Log4State extends State<Log4> {
   final _passController = TextEditingController();
   bool _obscurePass = true;
   bool _isLoading = false;
-  
+
   final LogService _logService = LogService();
-  
-  final List<Map<String, String>> _usuarios = [
-    {'usuario': 'adricruz', 'contrasena': 'adri1Anc', 'nombre': 'Adrián Cruz'},
-    {'usuario': 'adriprofe', 'contrasena': 'adriProf4', 'nombre': 'Adrián Profesor'},
-    {'usuario': 'maria_g', 'contrasena': 'Maria2024', 'nombre': 'María González'},
-    {'usuario': 'carlos_m', 'contrasena': 'Carlos123', 'nombre': 'Carlos Martínez'},
-  ];
+  final AuthService _authService = AuthService();
+  final BiometricService _biometricService = BiometricService();
+
+  bool _autenticandoBiometria = false;
+  bool _mostrarBotonBiometrico = false;
 
   @override
   void initState() {
@@ -36,6 +36,14 @@ class _Log4State extends State<Log4> {
       message: 'Pantalla de inicio de sesión cargada',
       details: {'pantalla': 'Log4'},
     );
+    _cargarPreferenciaBiometrica();
+  }
+
+  Future<void> _cargarPreferenciaBiometrica() async {
+    final habilitado = await _authService.accesoBiometricoHabilitado();
+    if (mounted) {
+      setState(() => _mostrarBotonBiometrico = habilitado);
+    }
   }
 
   @override
@@ -125,7 +133,7 @@ class _Log4State extends State<Log4> {
                     ),
                   ),
                   const SizedBox(height: 40),
-                  
+
                   // Campo Usuario
                   _buildTextField(
                     label: 'Usuario',
@@ -133,7 +141,7 @@ class _Log4State extends State<Log4> {
                     icon: Icons.person_outline,
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Campo Contraseña
                   _buildTextField(
                     label: 'Contraseña',
@@ -154,7 +162,7 @@ class _Log4State extends State<Log4> {
                     ),
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // Botón de inicio de sesión
                   SizedBox(
                     width: double.infinity,
@@ -188,7 +196,7 @@ class _Log4State extends State<Log4> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Botón de registro
                   SizedBox(
                     width: double.infinity,
@@ -221,6 +229,66 @@ class _Log4State extends State<Log4> {
                       ),
                     ),
                   ),
+
+                  // ── Separador "o" + Reconocimiento facial ──────────────
+                  // Solo se muestran si el usuario activó esta opción
+                  // durante el registro (ver log2.dart).
+                  if (_mostrarBotonBiometrico) ...[
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Divider(color: Colors.white.withOpacity(0.3)),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            'o',
+                            style: TextStyle(color: Colors.white.withOpacity(0.6)),
+                          ),
+                        ),
+                        Expanded(
+                          child: Divider(color: Colors.white.withOpacity(0.3)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: OutlinedButton.icon(
+                        onPressed: _autenticandoBiometria
+                            ? null
+                            : _entrarConReconocimientoFacial,
+                        icon: _autenticandoBiometria
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.face_retouching_natural, color: Colors.white),
+                        label: Text(
+                          _autenticandoBiometria
+                              ? 'Verificando...'
+                              : 'Entrar con reconocimiento facial',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Colors.white.withOpacity(0.6), width: 2),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -283,10 +351,10 @@ class _Log4State extends State<Log4> {
   }
 
   Future<void> _handleLogin() async {
-    final input = _usuarioController.text.trim();
+    final usuario = _usuarioController.text.trim();
     final password = _passController.text.trim();
 
-    if (input.isEmpty) {
+    if (usuario.isEmpty) {
       _showError('Por favor ingresa tu usuario');
       return;
     }
@@ -296,71 +364,135 @@ class _Log4State extends State<Log4> {
       return;
     }
 
-    final usuario = _usuarios.firstWhere(
-      (user) => user['usuario'] == input,
-      orElse: () => {},
-    );
-
-    if (usuario.isEmpty) {
-      _showError('Usuario no encontrado');
-      return;
-    }
-
-    if (usuario['contrasena'] != password) {
-      _showError('Contraseña incorrecta');
-      return;
-    }
-
     setState(() {
       _isLoading = true;
     });
 
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    await _logService.addLog(
-      type: LogType.login,
-      message: 'Inicio de sesión exitoso',
-      details: {
-        'usuario': usuario['usuario'],
-        'nombre': usuario['nombre'],
-      },
-    );
+    // Login real contra la API (Node.js), que valida contra PostgreSQL
+    final resultado = await _authService.login(usuario: usuario, password: password);
 
     setState(() {
       _isLoading = false;
     });
 
+    if (!resultado.success) {
+      await _logService.addLog(
+        type: LogType.error,
+        message: 'Intento de inicio de sesión fallido',
+        details: {'usuario': usuario, 'error': resultado.message},
+      );
+      if (mounted) _showError(resultado.message);
+      return;
+    }
+
+    await _logService.addLog(
+      type: LogType.login,
+      message: 'Inicio de sesión exitoso',
+      details: {
+        'id_usuario': resultado.idUsuario,
+        'usuario': usuario,
+        'nombre': resultado.nombre,
+        'rol': resultado.rol,
+      },
+    );
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('✅ ¡Bienvenido ${usuario['nombre']}!'),
+          content: Text('✅ ¡Bienvenido ${resultado.nombre}!'),
           backgroundColor: const Color(0xFF38b000),
           duration: const Duration(seconds: 2),
         ),
       );
 
-      // Validación especial para usuarios específicos
-      if (usuario['usuario'] == 'adricruz' && usuario['contrasena'] == 'adri1Anc') {
-        // Usuario normal: va a HomeScreen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-        );
-      } 
-      else if (usuario['usuario'] == 'adriprofe' && usuario['contrasena'] == 'adriProf4') {
-        // Usuario profesor: va a PrivadoScreen (acceso restringido)
+      // El rol viene de la base de datos (tabla Usuario: 'tutor' o 'alumno')
+      if (resultado.rol == 'tutor') {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const AdminPanelScreen()),
         );
-      }
-      else {
-        // Para los demás usuarios (maria_g, carlos_m) también van a HomeScreen
+      } else {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
       }
+    }
+  }
+
+  // ── Reconocimiento facial ────────────────────────────────────────────
+  // Mismo patrón que en log1.dart: el Face ID/huella no vuelve a llamar
+  // al login (no hay contraseña guardada), solo desbloquea la sesión que
+  // ya se guardó la última vez que el usuario inició sesión normal.
+
+  Future<void> _entrarConReconocimientoFacial() async {
+    setState(() => _autenticandoBiometria = true);
+
+    final resultado = await _biometricService.autenticar();
+
+    if (!mounted) return;
+    setState(() => _autenticandoBiometria = false);
+
+    switch (resultado) {
+      case BiometricResultado.exito:
+        await _continuarConSesionGuardada();
+        break;
+      case BiometricResultado.cancelado:
+        // El usuario cerró el diálogo, no hacemos nada más.
+        break;
+      case BiometricResultado.noDisponible:
+        _showError('Este dispositivo no tiene soporte biométrico.');
+        break;
+      case BiometricResultado.noConfigurado:
+        _showError(
+          'Configura Face ID o tu huella en los ajustes de tu teléfono para usar esta opción.',
+        );
+        break;
+      case BiometricResultado.bloqueado:
+        _showError('Biometría bloqueada temporalmente. Intenta más tarde.');
+        break;
+      case BiometricResultado.error:
+        _showError('No se pudo completar la autenticación. Intenta de nuevo.');
+        break;
+    }
+  }
+
+  Future<void> _continuarConSesionGuardada() async {
+    final sesion = await _authService.obtenerSesionGuardada();
+
+    if (sesion == null) {
+      await _logService.addLog(
+        type: LogType.navegacion,
+        message: 'Face ID exitoso pero sin sesión guardada',
+        details: {'origen': 'Log4'},
+      );
+      if (!mounted) return;
+      _showError('Primero inicia sesión con tu usuario y contraseña.');
+      return;
+    }
+
+    await _logService.addLog(
+      type: LogType.login,
+      message: 'Acceso con reconocimiento facial exitoso',
+      details: {
+        'id_usuario': sesion.idUsuario,
+        'nombre': sesion.nombre,
+        'rol': sesion.rol,
+      },
+    );
+
+    if (!mounted) return;
+
+    if (sesion.rol == 'tutor') {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminPanelScreen()),
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
     }
   }
 

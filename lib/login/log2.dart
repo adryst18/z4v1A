@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sabia/services/log_service.dart';
+import 'package:sabia/services/auth_service.dart';
+import 'package:sabia/services/biometric_service.dart';
 import 'package:sabia/models/log_entry.dart';
 import 'log4.dart';
 
@@ -15,12 +17,15 @@ class _Log2State extends State<Log2> {
   final _correoController = TextEditingController();
   final _passController = TextEditingController();
   final _confirmPassController = TextEditingController();
-  
+
   bool _obscurePass = true;
   bool _obscureConfirmPass = true;
   bool _isLoading = false;
-  
+  bool _quiereReconocimientoFacial = false;
+
   final LogService _logService = LogService();
+  final AuthService _authService = AuthService();
+  final BiometricService _biometricService = BiometricService();
 
   @override
   void initState() {
@@ -119,7 +124,7 @@ class _Log2State extends State<Log2> {
                     ),
                   ),
                   const SizedBox(height: 40),
-                  
+
                   // Campo Usuario
                   _buildTextField(
                     label: 'Usuario',
@@ -127,7 +132,7 @@ class _Log2State extends State<Log2> {
                     icon: Icons.person_outline,
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Campo Correo
                   _buildTextField(
                     label: 'Correo electrónico',
@@ -136,7 +141,7 @@ class _Log2State extends State<Log2> {
                     keyboardType: TextInputType.emailAddress,
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Campo Contraseña
                   _buildTextField(
                     label: 'Contraseña',
@@ -157,7 +162,7 @@ class _Log2State extends State<Log2> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Campo Confirmar Contraseña
                   _buildTextField(
                     label: 'Confirmar contraseña',
@@ -177,8 +182,47 @@ class _Log2State extends State<Log2> {
                       },
                     ),
                   ),
-                  const SizedBox(height: 32),
-                  
+                  const SizedBox(height: 20),
+
+                  // ── Checkbox: activar reconocimiento facial ─────────
+                  // Solo guarda la preferencia; la confirmación real con
+                  // el sensor del dispositivo ocurre después de que el
+                  // registro sea exitoso (ver _handleRegister).
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white.withOpacity(0.25)),
+                    ),
+                    child: CheckboxListTile(
+                      value: _quiereReconocimientoFacial,
+                      onChanged: (valor) {
+                        setState(() {
+                          _quiereReconocimientoFacial = valor ?? false;
+                        });
+                      },
+                      controlAffinity: ListTileControlAffinity.leading,
+                      activeColor: const Color(0xFF38b000),
+                      checkColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                      title: Row(
+                        children: [
+                          const Icon(Icons.face_retouching_natural,
+                              color: Colors.white, size: 20),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              'Usar reconocimiento facial para entrar más rápido',
+                              style: TextStyle(color: Colors.white, fontSize: 14),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
                   // Botón de registro
                   SizedBox(
                     width: double.infinity,
@@ -212,7 +256,7 @@ class _Log2State extends State<Log2> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Botón de inicio de sesión
                   SizedBox(
                     width: double.infinity,
@@ -312,46 +356,85 @@ class _Log2State extends State<Log2> {
       _showError('Por favor ingresa un usuario');
       return;
     }
-    
+
     if (_correoController.text.isEmpty || !_correoController.text.contains('@')) {
       _showError('Por favor ingresa un correo válido');
       return;
     }
-    
+
     if (_passController.text.isEmpty) {
       _showError('Por favor ingresa una contraseña');
       return;
     }
-    
+
     if (_passController.text != _confirmPassController.text) {
       _showError('Las contraseñas no coinciden');
       return;
     }
-    
+
     if (_passController.text.length < 6) {
       _showError('La contraseña debe tener al menos 6 caracteres');
       return;
     }
-    
+
     setState(() {
       _isLoading = true;
     });
-    
-    await Future.delayed(const Duration(seconds: 1));
-    
+
+    // Se registra de verdad contra la API (Node.js) que guarda en PostgreSQL
+    final resultado = await _authService.register(
+      usuario: _usuarioController.text.trim(),
+      password: _passController.text,
+      correo: _correoController.text.trim(),
+    );
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (!resultado.success) {
+      await _logService.addLog(
+        type: LogType.error,
+        message: 'Error al registrar usuario',
+        details: {'usuario': _usuarioController.text, 'error': resultado.message},
+      );
+      if (mounted) _showError(resultado.message);
+      return;
+    }
+
     await _logService.addLog(
       type: LogType.register,
       message: 'Nuevo usuario registrado',
       details: {
+        'id_usuario': resultado.idUsuario,
         'usuario': _usuarioController.text,
         'correo': _correoController.text,
       },
     );
-    
-    setState(() {
-      _isLoading = false;
-    });
-    
+
+    // Si el usuario marcó el checkbox, confirmamos con el sensor del
+    // dispositivo (Face ID/huella) antes de activar el acceso rápido.
+    // Esto asegura que su dispositivo realmente soporta biometría antes
+    // de ofrecerle esa opción la próxima vez que abra la app.
+    if (_quiereReconocimientoFacial && mounted) {
+      final disponible = await _biometricService.esDisponible();
+      if (disponible) {
+        final resultadoBiometrico = await _biometricService.autenticar();
+        if (resultadoBiometrico == BiometricResultado.exito) {
+          await _authService.habilitarAccesoBiometrico();
+          await _logService.addLog(
+            type: LogType.navegacion,
+            message: 'Reconocimiento facial activado durante el registro',
+            details: {'usuario': _usuarioController.text},
+          );
+        } else if (mounted) {
+          _showError('No se pudo activar el reconocimiento facial. Podrás activarlo después.');
+        }
+      } else if (mounted) {
+        _showError('Tu dispositivo no tiene soporte biométrico disponible.');
+      }
+    }
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -360,14 +443,14 @@ class _Log2State extends State<Log2> {
           duration: Duration(seconds: 2),
         ),
       );
-      
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const Log4()),
       );
     }
   }
-  
+
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

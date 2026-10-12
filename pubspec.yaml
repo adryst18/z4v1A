@@ -50,6 +50,9 @@ dependencies:
   # Almacenamiento
   shared_preferences: ^2.2.2
 
+  # Biometría / reconocimiento facial
+  local_auth: ^2.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
